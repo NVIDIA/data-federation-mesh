@@ -1,0 +1,55 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+operation:
+  xarray.ConvertToUint8:
+    description: "Converts the xarray to uint8"
+    parameters:
+      data:
+        description: "The xarray to convert"
+        type: object
+      time_dimension:
+        description: "The name of the time dimension"
+        type: string
+      xydims:
+        description: "The names of the x and y dimensions"
+        type: array
+      min_value:
+        description: "The minimum value"
+        type: number
+      max_value:
+        description: "The maximum value"
+        type: number
+    required:
+      - data
+      - time_dimension
+      - xydims
+    returns: object
+interface:
+  "#/operations/xarray.ConvertToUint8":
+    adapter: nv_dfm_lib_weather.xarray.ConvertToUint8
+    description: "Converts the xarray to uint8"
+    is-async: true
+    args:
+      data:
+        from-param: data
+      time_dimension:
+        from-param: time_dimension
+      xydims:
+        from-param: xydims
+      min_value:
+        from-param: min_value
+      max_value:
+        from-param: max_value

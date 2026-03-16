@@ -1,0 +1,63 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+api_version: 3
+name: weather_fed
+description: DFM Adapter Library Test Federation
+
+participants:
+  # Ensure that the server address is correctly mapped in the /etc/hosts file.
+  - name: homesite@nv-dfm-lib.nvidia.com
+    type: admin
+    org: nvidia
+    role: project_admin
+  - name: server
+    type: server
+    org: nvidia
+    fed_learn_port: 8002
+    admin_port: 8003
+  - name: client1
+    type: client
+    org: nvidia
+
+# The same methods in all builders are called in their order defined in builders section
+builders:
+  - path: nvflare.lighter.impl.workspace.WorkspaceBuilder
+    args:
+      template_file:
+        - master_template.yml
+        - aws_template.yml
+        - azure_template.yml
+  - path: nvflare.lighter.impl.template.TemplateBuilder
+  - path: nvflare.lighter.impl.static_file.StaticFileBuilder
+    args:
+      # config_folder can be set to inform NVIDIA FLARE where to get configuration
+      config_folder: config
+
+      overseer_agent:
+        path: nvflare.ha.dummy_overseer_agent.DummyOverseerAgent
+        # if overseer_exists is true, args here are ignored.  Provisioning
+        #   tool will fill role, name and other local parameters automatically.
+        # if overseer_exists is false, args in this section will be used and the sp_end_point
+        # must match the server defined above in the format of SERVER_NAME:FL_PORT:ADMIN_PORT
+        #
+        overseer_exists: false
+        args:
+          sp_end_point: flare-dfm-flare-server:8002:8003
+
+
+  - path: nvflare.lighter.impl.cert.CertBuilder
+  - path: nvflare.lighter.impl.signature.SignatureBuilder
+  - path: nv_dfm_core.targets.flare.builder.WorkspaceArchiveBuilder

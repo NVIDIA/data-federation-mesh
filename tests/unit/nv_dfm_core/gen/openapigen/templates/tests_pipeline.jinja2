@@ -1,0 +1,163 @@
+{#
+SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+#}
+
+from nv_dfm_core.api import Pipeline, Yield, PlaceParam, PreparedPipeline, ErrorToken
+from nv_dfm_core.exec import Frame
+import json
+from pathlib import Path
+from typing import Any, Optional
+
+# Auto-generated imports from operations
+{%- for import in imports %}
+from {{ import.module }} import {{ import.name }} as {{ import.alias }}
+{%- endfor %}
+import ogc_api_test.fed.runtime.ogc_site
+
+
+def yield_callback(_from_site: str, _node: int | str | None, _frame: Frame, _target_place: str, data):
+    """Callback for yield operations."""
+    if not data.status_code in [200, 204]:
+        print(data.content)
+    else:
+        print("Success!")
+
+
+def default_callback(_from_site: str, _node: int | str | None, _frame: Frame, _target_place: str, data):
+    """Default callback for pipeline execution."""
+    print(f"Default callback: {data}")
+
+
+# Auto-generated pipeline functions for each operation
+{%- for import in imports %}
+
+# {{ import.full_name }}
+# {{ import.data.description }}
+def _create_pipeline_{{ import.alias }}() -> PreparedPipeline:
+    """
+    Creates DFM pipeline for {{ import.alias }}.
+    
+    Returns:
+        PreparedPipeline: Prepared pipeline for execution
+    """
+    with Pipeline() as p:
+        response = {{ import.alias }}(
+{%- for param in import.parameters %}
+            {{ param.name }}=PlaceParam(place="{{ param.name }}"){{ "," if not loop.last else "" }}
+{%- endfor %}
+        )
+        Yield(value=response, place="api_response")
+    return p
+
+
+def test_{{ import.alias }}(
+{%- for param in import.parameters %}
+    {{ param.name }}: {{ param.type }}{{ ", " if not loop.last else "" }}
+{%- endfor %}
+{%- if import.parameters %}, {% endif %}session_name: str = "local", timeout: int = 600):
+    """
+    Tests {{ import.alias }} operation with provided parameters.
+    
+    Parameters:
+{%- for param in import.parameters %}
+    - {{ param.name }} ({{ param.type }}){% if param.enum %}: One of {{ param.enum }}{% endif %}
+{%- endfor %}
+    - session_name (str): Session name to use (default: "local")
+    - timeout (int): Timeout in seconds (default: 600)
+    
+    Returns:
+        JobStatus: Status of the executed job
+    """
+    # Get and connect to session
+    session = ogc_api_test.fed.runtime.ogc_site.get_session(session_name)
+    session.connect()
+    
+    # Prepare pipeline
+    pipeline = session.prepare(_create_pipeline_{{ import.alias }}())
+    
+    # Set up input parameters
+    input_params = {
+{%- for param in import.parameters %}
+        "{{ param.name }}": {{ param.name }}{{ "," if not loop.last else "" }}
+{%- endfor %}
+    }
+    
+    # Execute pipeline
+    job = session.execute(
+        pipeline,
+        input_params,
+        place_callbacks={
+            "yield": yield_callback,
+            "api_response": yield_callback
+        },
+        default_callback=default_callback,
+        debug=False
+    )
+    
+    # Wait for completion
+    job.wait_until_finished(timeout=timeout)
+    status = job.get_status()
+    print(f"Job status for {{ import.module}}.{{ import.name }}: {status}")
+    
+    # Close session
+    session.close()
+    
+    return status
+{%- endfor %}
+
+
+if __name__ == "__main__":
+    # Load test parameters from JSON file
+    json_path = Path(__file__).parent / "test_parameters.json"
+    
+    if not json_path.exists():
+        print(f"Error: Test parameters file not found: {json_path}")
+        print("Please run testgen.py to generate the test parameters file.")
+        exit(1)
+    
+    with open(json_path, 'r') as f:
+        test_params = json.load(f)
+    
+    print("Running all tests with parameters from test_parameters.json")
+    print("=" * 80)
+    
+    # Run all tests
+    results = {}
+{%- for import in imports %}
+    
+    # Test {{ import.module }}.{{ import.name }}
+    if "{{ import.full_name }}" in test_params:
+        print(f"\nTesting {{ import.module }}.{{ import.name }}...")
+        params = test_params["{{ import.full_name }}"]
+        try:
+            status = test_{{ import.alias }}(
+{%- for param in import.parameters %}
+                {{ param.name }}=params["{{ param.name }}"]{{ "," if not loop.last else "" }}
+{%- endfor %}
+            )
+            results["{{ import.full_name }}"] = status
+            print(f"✓ {{ import.module }}.{{ import.name }} completed: {status}")
+        except Exception as e:
+            print(f"✗ {{ import.module }}.{{ import.name }} failed: {e}")
+            results["{{ import.full_name }}"] = f"Error: {e}"
+{%- endfor %}
+    
+    # Summary
+    print("\n" + "=" * 80)
+    print("Test Summary:")
+    print("=" * 80)
+    for op_name, result in results.items():
+        print(f"{op_name}: {result}")

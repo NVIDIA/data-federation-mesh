@@ -1,0 +1,25 @@
+{
+    "project_name": "My Project",
+    "__project_slug": "{{ cookiecutter.project_name|lower|replace(' ', '-') }}",
+    "__package_name": "{{ cookiecutter.project_name|lower|replace(' ', '_') }}",
+
+    "description": "This is my new DFM project",
+    "author": "NVIDIA",
+    "email": "<contact@nvidia.com>",
+
+    "workspace_path": "workspace",
+    "federation_name": "my_federation",
+    "__federation_dir": "{{ cookiecutter.__package_name }}",
+
+    "app_name": "my_dfm_app",
+    "__nvflare_admin": "{{ cookiecutter.app_name|lower|replace('_', '') }}",
+    "__prompts__": {
+        "project_name": "Enter project name",
+        "description": "Project description",
+        "author": "Project author",
+        "email": "Author email",
+        "workspace_path": "Path to the runtime workspace (can be changed later in .dfm-cli.conf.yaml)",
+        "federation_name": "Name for the federation you want to build (can be changed later in federations.yaml)",
+        "app_name": "Enter name of the app that runs DFM pipeline"
+    }   
+}

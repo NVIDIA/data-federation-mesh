@@ -1,154 +1,155 @@
-# __NVIDIA_OSS__ Standard Repo Template
+<!--
+SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
 
-This README file is from the NVIDIA_OSS standard repo template of [PLC-OSS-Template](https://github.com/NVIDIA-GitHub-Management/PLC-OSS-Template?tab=readme-ov-file). It provides a list of files in the PLC-OSS-Template and guidelines on how to use (clone and customize) them.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-**Upon completing the customization for the project repo, the repo admin should replace this README template with the project specific README file.**
+http://www.apache.org/licenses/LICENSE-2.0
 
-- Files (org-wide templates in the NVIDIA .github org repo; per-repo overrides allowed) in [PLC-OSS-Template](https://github.com/NVIDIA-GitHub-Management/PLC-OSS-Template?tab=readme-ov-file)
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
 
-   - Root 
-     - README.md skeleton (CTA + Quickstart + Support/Security/Governance links) 
-     - LICENSE (Apache 2.0 by default)
-        - For other licenses, see the [Confluence page](https://confluence.nvidia.com/pages/viewpage.action?pageId=788418816) for other licenses
-        - CLA.md file (delete if not using MIT or BSD licenses)
-     - CODE_OF_CONDUCT.md 
-     - SECURITY.md (vuln reporting path) 
-     - CONTRIBUTING.md (base; repo can add specifics)
-     - SUPPORT.md (Support levels/channels)
-     - GOVERNANCE.md (baseline; repo may extend)
-     - CITATION.md (for projects that need citation)
+<!-- markdownlint-disable MD002 MD033 MD041 MD053 -->
+<div align="center">
 
-   - .github/ 
-     - ISSUE_TEMPLATE/ (<https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository>)
-       - bug.yml, feature.yml, task.yml, config.yml 
-     - PULL_REQUEST_TEMPLATE.md (<https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/creating-a-pull-request-template-for-your-repository>)
-     - workflows/
-     - Note: workflow-templates/ for starter workflows should live in the org-level .github repo, not per-repo
+# NVIDIA Data Federation Mesh
 
-   - Repo-specific (not org-template, maintained by the team)
-     - CODEOWNERS (place at .github/CODEOWNERS or repo root)
-     - CHANGELOG.md (or RELEASE.md) 
-     - ROADMAP.md 
-     - MAINTAINERS.md 
-     - NOTICE or THIRD_PARTY_NOTICES / THIRD_PARTY_LICENSES (dependency specific)
-     - Build/package files (CMake, pyproject, Dockerfile, etc.)
+Data Federation Mesh (DFM) is a Python-based framework designed to facilitate creation and orchestration of complex workflows processing data coming from various distributed sources, and streaming those data into applications. 
+Our mission is creating smart system that determines for the user where to run each operation of a data processing pipeline and whether data need to be moved in order for each operation to function
 
-   - Recommended structure and hygiene
-     - docs/
-     - examples/
-     - tests/
-     - scripts/
-     - Container/dev env: Dockerfile, docker/, .devcontainer/ (optional)
-     - Build/package (language-specific):
-       - Python: pyproject.toml, setup.cfg/setup.py, requirements.txt, environment.yml
-       - C++: CMakeLists.txt, cmake/, vcpkg.json
-     - Repo hygiene: .gitignore, .gitattributes, .editorconfig, .pre-commit-config.yaml, .clang-format
+<!-- markdownlint-disable MD036 -->
+**- DFM Documentation -**
+<!-- markdownlint-enable MD036 -->
 
+[Install][dfm_install_url] | [User-Guide][dfm_userguide_url] |
+[Tutorials][dfm_tutorials_url] | [API][dfm_api_url]
 
-## Usage of [PLC-OSS-Template](https://github.com/NVIDIA-GitHub-Management/PLC-OSS-Template?tab=readme-ov-file) for NEW NVIDIA OSS repos
+![DFM Banner](./docs/_static/dfm-logo/logo-rectangle.png)
 
-1. Clone the [PLC-OSS-Template](https://github.com/NVIDIA-GitHub-Management/PLC-OSS-Template?tab=readme-ov-file)
-2. Find/replace all in the clone of `___PROJECT___` and `__PROJECT_NAME__` with the name of the specific project.
-3. Inspect all files to make sure all replacements work and update text as needed
+</div>
 
+## Project Structure
 
-**What you can reuse immediately**
-- CODE_OF_CONDUCT.md
-- SECURITY.md
-- CONTRIBUTING.md (base)
-- .github/ISSUE_TEMPLATE/.yml (bug/feature/task + config.yml)
-- .github/PULL_REQUEST_TEMPLATE.md
-- Reusable workflows 
+This is a **monorepo** containing multiple Python packages:
 
-**What you must customize per repo**
-- README.md: copy the skeleton and fill in product-specific details (Quickstart, Requirements, Usage, Support level, links)
-- LICENSE: check file is correct, update year, consult Confluence for alternatives https://confluence.nvidia.com/pages/viewpage.action?pageId=788418816, add CLA.md only if your license/process requires it
-- CODEOWNERS: replace <TEAM> with your GitHub team handle(s). Place at .github/CODEOWNERS (or repo root)
-- MAINTAINERS.md: list maintainers names/roles, escalation path
-- CHANGELOG.md (or RELEASE.md): track releases/changes
-- SUPPORT.md: Update for your project
-- ROADMAP.md (optional): upcoming milestones
-- NOTICE / THIRD_PARTY_NOTICES (if you ship third‑party content)
-- Build/package files (CMake/pyproject/Dockerfile/etc.), tests/, docs/, examples/, scripts/ as appropriate
-- Workflows: Edit if you need custom behavior 
+| Package | Description |
+|---------|-------------|
+| `nv-dfm-core` | Core DFM package containing API, execution and generation engines and CLI |
+| `nv-dfm-lib-common` | Common utilities shared across adapter libraries |
+| `nv-dfm-lib-weather` | Weather and climate data adapters (GFS, ECMWF, HRRR, SFNO, cBottle) |
 
-
-4. Change git origin to point to new repo and push
-5. Remove the line break below and everything above it
-
-## Usage for existing NVIDIA OSS repos
-
-1. Follow the steps above, but add the files to your existing repo and merge
-
-<!-- REMOVE THE LINE BELOW AND EVERYTHING ABOVE -->
------------------------------------------
-# [Project Title]
-One-sentence value proposition for users. Who is it for, and why it matters. 
-
-# Overview
-What the project does? Why the project is useful?
-Provide a brief overview, highlighting key features or problem-solving capabilities.
-
-# Getting Started
-Guide users on how they can get started with the project. This should include basic installation step, quick-start examples 
-```bash
-# Option A: Package manager (pip/conda/npm/etc.)
-<copy-paste install>
-
-# Option B: Container
-docker run <image> <args>
-
-# Verify (hello world)
-<one-liner or ~10-line example>
 ```
-# Requirements
-Include a list of pre-requisites. 
-- OS/Arch: <summary or link to full matrix>
-- Runtime/Compiler: <versions>
-- GPU/Drivers (if applicable): CUDA <ver>, driver <ver>, etc.
-
-# Usage
-```bash
-# Minimal runnable snippet (≤20 lines)
-<code>
+data-federation-mesh/
+├── packages/
+│   ├── nv-dfm-core/             # Core framework package
+│   ├── nv-dfm-lib-common/       # Common utilities
+│   └── nv-dfm-lib-weather/      # Weather adapters
+├── ci/                          # CI/CD infrastructure
+├── docs/                        # Documentation
+├── tutorials/                   # Tutorials, examples and startup folder 
+└── tests/                       # Unit tests
 ```
-- More examples/tutorials: <link>
-- API reference: <link>
 
-# Performance (Optional)
-Summary of benchmarks; link to detailed results and hardware used.
+## Quick Start
 
-## Releases & Roadmap 
-- Releases/Changelog: <link>
-- (Optional) Next milestones or link to `ROADMAP.md`.
-  
-# Contribution Guidelines
-- Start here: `CONTRIBUTING.md`
-- Code of Conduct: `CODE_OF_CONDUCT.md`
-- Development quickstart (build/test):
+### Installation from PyPI
+
 ```bash
-<clone> && <deps> && <build/test>
+# Install core framework only
+pip install nv-dfm-core
+
+# Install weather adapters library (see warning below)
+pip install nv-dfm-lib-weather
+
+# Install weather adapters with AI model support (requires GPU, see below)
+pip install nv-dfm-lib-weather[cbottle]   # cBottle model adapters
+pip install nv-dfm-lib-weather[sfno]      # SFNO model adapters
+pip install nv-dfm-lib-weather[all]       # all AI model adapters
 ```
-## Governance & Maintainers
-- Governance: `GOVERNANCE.md`
-- Maintainers: <team/handles>
-- Labeling/triage policy: <link>
 
-## Security
-- Vulnerability disclosure: `SECURITY.md`
-- Do not file public issues for security reports.
+> **Note:** `nv-dfm-lib-weather` depends on `earth2studio`, which may require additional dependencies depending on your environment. The SFNO and cBottle AI model adapters additionally require a CUDA-capable NVIDIA GPU and model-specific setup. See the [installation guide][dfm_install_url] for full prerequisites.
 
-## Support
-- Level: <Experimental | Maintained | Stable>
-- How to get help: Issues/Discussions/<channel link>
-- Response expectations (if any).
 
-# Community
-Provide the channel for community communications.
 
-# References
-Provide a list of related references
+### Development Setup
 
-# License
-This project is licensed under the [NAME HERE] License - see the LICENSE.md file for details
-- License: <link>
+To work with the source, run tutorials, or contribute, clone the repository and use [uv](https://docs.astral.sh/uv/) to manage the workspace.
+
+> **Note:** If you don't have `uv` installed, follow the [uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/).
+
+```bash
+git clone https://github.com/NVIDIA/data-federation-mesh.git
+cd data-federation-mesh
+```
+
+This is a multi-package workspace. Use `uv sync` to install packages into the local `.venv`:
+
+```bash
+# Install all workspace packages and their dependencies
+uv sync --all-packages
+
+# Install a single package (for example core only)
+uv sync --package nv-dfm-core
+
+# Install with tutorial extras (adds JupyterLab, ipywidgets, leafmap)
+uv sync --all-packages --extra tutorials
+```
+
+> **Important:** Each `uv sync` invocation reconfigures the virtual environment to match
+> exactly the requested set of packages. Syncing for a single package will remove
+> dependencies that are not required by that package. Use `--all-packages` when you need
+> the full workspace available.
+
+### Examples
+
+- Basic introduction into federation setup and adapters development, see [zero-to-thirty](./tutorials/zero-to-thirty/00-introduction.md) tutorial.
+
+- To start your own federation from scratch: [cookiecutter startup folder](./tutorials/startup-fed/).  
+
+- Tutorial on creating pipelines and using adapters for loading and processing weather data: [weather-fed](./tutorials/weather-fed/).
+
+## Overview
+
+DFM is a programmable framework for managing and orchestrating various services, distributed across potentially numerous sites, to collaborate and implement common functionalities. It is engineered to deliver "glue code as a service" to facilitate creating of complex pipelines and workflows to process data.
+
+<div align="center">
+<img src="./docs/_static/diagrams/DFM_overview.png" alt="DFM Overview" width="700">
+</div>
+
+DFM consists of multiple sites, which are groups of collocated services that are deployed together. Multiple sites communicating with each other in a peer-to-peer way, form a *federation*. 
+DFM can be approached from the perspective of developers and users.
+The developers implement functionality that each site provides, in the form of a plugin-like mechanism called *adapters*. The adapters are not exposed directly to the users, but rather assigned within the federation to a public interface called *operations*. 
+The users create and submit data processing pipelines to the federation using provided operations API. 
+DFM ensures execution of each operations on dedicated sites and transfer of data between sites.
+
+### NVIDIA Flare 
+
+DFM is built on top of [NVIDIA Flare](https://developer.nvidia.com/flare), which provides runtime services such as distributed messaging, job management, security, deployment, and simulation framework. 
+
+### DFM Command Line Interface
+
+**DFM CLI** is a command line tool that facilitates management of DFM and underlying NVIDIA Flare and provides a convenient way to perform many DFM-related tasks (including development tasks, such
+as testing and linting). See [DFM CLI Documentation](https://nvidia.github.io/data-federation-mesh/userguide/cli/index.html) for details.
+
+## Contributors
+
+This project is currently not accepting contributions.
+
+## License
+
+DFM is provided under the Apache License 2.0, refer to the
+[LICENSE file](LICENSE) for full license text.
+
+<!-- Doc links -->
+[dfm_docs_url]: https://nvidia.github.io/data-federation-mesh/index.html
+[dfm_install_url]: https://nvidia.github.io/data-federation-mesh/userguide/about/installation.html
+[dfm_userguide_url]: https://nvidia.github.io/data-federation-mesh/userguide/index.html
+[dfm_tutorials_url]: https://nvidia.github.io/data-federation-mesh/tutorials.html
+[dfm_api_url]: https://nvidia.github.io/data-federation-mesh/modules/index.html
+[dfm_docs_cli]: https://nvidia.github.io/data-federation-mesh/userguide/cli/index.html

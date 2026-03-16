@@ -1,0 +1,96 @@
+{
+  "sites": {
+    "worker": {
+      "interface": {
+        "tasks.ProcessData": {
+          "operation": "tasks.ProcessData",
+          "compute_cost": {
+            "fixed_time": 1000000.0,
+            "compute_throughput": null,
+            "fixed_size": 10000000,
+            "output_factor": 0.0
+          },
+          "is_async": true
+        },
+        "tasks.RunComputation": {
+          "operation": "tasks.RunComputation",
+          "compute_cost": {
+            "fixed_time": 1000000.0,
+            "compute_throughput": null,
+            "fixed_size": 10000000,
+            "output_factor": 0.0
+          },
+          "is_async": true
+        },
+        "tasks.RunController": {
+          "operation": "tasks.RunController",
+          "compute_cost": {
+            "fixed_time": 1000000.0,
+            "compute_throughput": null,
+            "fixed_size": 10000000,
+            "output_factor": 0.0
+          },
+          "is_async": true
+        },
+        "tasks.GenerateReport": {
+          "operation": "tasks.GenerateReport",
+          "compute_cost": {
+            "fixed_time": 1000000.0,
+            "compute_throughput": null,
+            "fixed_size": 10000000,
+            "output_factor": 0.0
+          },
+          "is_async": false
+        }
+      },
+      "providers": {},
+      "send_cost": {}
+    },
+    "server": {
+      "interface": {
+        "tasks.ProcessData": {
+          "operation": "tasks.ProcessData",
+          "compute_cost": {
+            "fixed_time": 1000000.0,
+            "compute_throughput": null,
+            "fixed_size": 10000000,
+            "output_factor": 0.0
+          },
+          "is_async": true
+        },
+        "tasks.RunComputation": {
+          "operation": "tasks.RunComputation",
+          "compute_cost": {
+            "fixed_time": 1000000.0,
+            "compute_throughput": null,
+            "fixed_size": 10000000,
+            "output_factor": 0.0
+          },
+          "is_async": true
+        },
+        "tasks.RunController": {
+          "operation": "tasks.RunController",
+          "compute_cost": {
+            "fixed_time": 1000000.0,
+            "compute_throughput": null,
+            "fixed_size": 10000000,
+            "output_factor": 0.0
+          },
+          "is_async": true
+        },
+        "tasks.GenerateReport": {
+          "operation": "tasks.GenerateReport",
+          "compute_cost": {
+            "fixed_time": 1000000.0,
+            "compute_throughput": null,
+            "fixed_size": 10000000,
+            "output_factor": 0.0
+          },
+          "is_async": true
+        }
+      },
+      "providers": {},
+      "send_cost": {}
+    }
+  }
+}

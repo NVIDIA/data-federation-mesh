@@ -1,0 +1,69 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Build CI Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag (e.g. 1.0.0 or latest)"
+        required: true
+        default: "latest"
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-push:
+    runs-on: linux-amd64-cpu4
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set image name
+        run: echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}/dfm-ci" >> "$GITHUB_ENV"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ci/docker/Dockerfile.gh.ci
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.image_tag }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      - name: Set package visibility to private
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PACKAGE_NAME="${{ github.event.repository.name }}/dfm-ci"
+          ENCODED_NAME="${PACKAGE_NAME//\//%2F}"
+          gh api --method PATCH \
+            "/orgs/${{ github.repository_owner }}/packages/container/${ENCODED_NAME}" \
+            -f visibility=private 2>&1 \
+            || echo "::warning::Could not set package visibility to private via API. Please set it manually in the package settings."

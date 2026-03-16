@@ -1,0 +1,247 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+dfm: 1.0.0
+info:
+  api-version: 0.0.1
+  code-package: testpkg
+  description: "A generic test federation for apigen testing"
+schemas:
+  tasks.InputState:
+    description: "The input state for processing"
+    type: object
+    properties:
+      value:
+        type: number
+      weight:
+        type: number
+operations:
+  tasks.ProcessData:
+    description: "Process the input data"
+    parameters:
+      input_state:
+        $ref:
+          "#/schemas/tasks.InputState"
+      interval:
+        description: "The time interval"
+        type: [number, boolean, testpkg.lib.custom_types.CustomModel]
+      timestamp:
+        description: "The timestamp"
+        type: testpkg.lib.custom_types.CustomModel
+    required:
+      - input_state
+      - interval
+      - timestamp
+    returns: object
+  tasks.RunComputation:
+    description: "Run the computation"
+    parameters:
+      $ref:
+        - "tests/assets/inputs/apigen_testfiles/ComputationParams1.partial.dfm.yaml#/params"
+        - "tests/assets/inputs/apigen_testfiles/ComputationParams2.partial.dfm.yaml#/params"
+    required:
+      - initial_state
+      - input_state
+      - rate_alpha
+      - rate_beta
+      - step_size
+    returns: object
+  tasks.RunController:
+    description: "Run the controller"
+    parameters:
+      input_state:
+        description: "The input state"
+        type: object
+      results:
+        description: "The computation results"
+        type: object
+      rate_alpha:
+        description: "The alpha rate"
+        type: number
+      adjusted_rate:
+        description: "The adjusted rate"
+        type: number
+      step_size:
+        description: "The step size"
+        type: number
+      mode:
+        description: "The operating mode"
+        type: string
+    required:
+      - control_state
+      - input_state
+      - results
+      - rate_alpha
+      - adjusted_rate
+      - step_size
+      - mode
+    returns: object
+  tasks.GenerateReport:
+    description: "Generate a report"
+    parameters:
+      results:
+        description: "The results"
+        type: object
+      rate_alpha:
+        description: "The alpha rate"
+        type: number
+      rate_beta:
+        description: "The beta rate"
+        type: number
+      include_details:
+        description: "Whether to include details"
+        type: boolean
+      include_summary:
+        description: "Whether to include summary"
+        type: boolean
+    required:
+      - results
+      - rate_alpha
+      - rate_beta
+      - include_details
+      - include_summary
+    returns: object
+sites:
+  worker:
+    info:
+      description: "The worker site"
+    cache_config:
+      protocol: "s3"
+      storage_options: {key: "test-key", secret: "test-secret"}
+      base_path: "/cache/bucket"
+    secrets_vault:
+      path: "testpkg.lib.vault.VaultImpl"
+      args: {prefix: "SECRET_"}
+    interface:
+      "#/operations/tasks.ProcessData":
+        adapter: testpkg.lib.adapters.process_adapter.ProcessAdapter
+        description: "Processes the input data"
+        is-async: true
+        args:
+          input_state:
+            from-param: input_state
+          interval:
+            from-param: interval
+          timestamp:
+            from-param: timestamp
+      "#/operations/tasks.RunComputation":
+        adapter: testpkg.lib.adapters.compute_adapter.ComputeAdapter
+        description: "Runs the computation"
+        is-async: true
+        args:
+          initial_state:
+            from-param: initial_state
+          input_state:
+            from-param: input_state
+          rate_alpha:
+            from-param: rate_alpha
+          rate_beta:
+            from-param: rate_beta
+          step_size:
+            from-param: step_size
+      "#/operations/tasks.RunController":
+        adapter: testpkg.lib.adapters.controller_adapter.ControllerAdapter
+        description: "Runs the controller"
+        is-async: true
+        args:
+          input_state:
+            from-param: input_state
+          results:
+            from-param: results
+          rate_alpha:
+            from-param: rate_alpha
+          adjusted_rate:
+            from-param: adjusted_rate
+          step_size:
+            from-param: step_size
+          mode:
+            from-param: mode
+      "#/operations/tasks.GenerateReport":
+        adapter: testpkg.lib.adapters.report_adapter.ReportAdapter
+        description: "Generates the report"
+        is-async: false
+        args:
+          results:
+            from-param: results
+          rate_alpha:
+            from-param: rate_alpha
+          rate_beta:
+            from-param: rate_beta
+          include_details:
+            from-param: include_details
+          include_summary:
+            from-param: include_summary
+  server:
+    info:
+      description: "The central server site"
+    interface:
+      "#/operations/tasks.ProcessData":
+        adapter: testpkg.lib.adapters.process_adapter.ProcessAdapter
+        description: "Processes the input data"
+        is-async: true
+        args:
+          input_state:
+            from-param: input_state
+          interval:
+            from-param: interval
+          timestamp:
+            from-param: timestamp
+      "#/operations/tasks.RunComputation":
+        adapter: testpkg.lib.adapters.compute_adapter.ComputeAdapter
+        description: "Runs the computation"
+        is-async: true
+        args:
+          initial_state:
+            from-param: initial_state
+          input_state:
+            from-param: input_state
+          rate_alpha:
+            from-param: rate_alpha
+          rate_beta:
+            from-param: rate_beta
+          step_size:
+            from-param: step_size
+      "#/operations/tasks.RunController":
+        adapter: testpkg.lib.adapters.controller_adapter.ControllerAdapter
+        description: "Runs the controller"
+        is-async: true
+        args:
+          input_state:
+            from-param: input_state
+          results:
+            from-param: results
+          rate_alpha:
+            from-param: rate_alpha
+          adjusted_rate:
+            from-param: adjusted_rate
+          step_size:
+            from-param: step_size
+          mode:
+            from-param: mode
+      "#/operations/tasks.GenerateReport":
+        adapter: testpkg.lib.adapters.report_adapter.ReportAdapter
+        description: "Generates the report"
+        is-async: true
+        args:
+          results:
+            from-param: results
+          rate_alpha:
+            from-param: rate_alpha
+          rate_beta:
+            from-param: rate_beta
+          include_details:
+            from-param: include_details
+          include_summary:
+            from-param: include_summary

@@ -1,0 +1,122 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+[project]
+name = "nv-dfm-workspace"
+version = "0.0.0"  # Virtual workspace - actual version comes from nv-dfm-core via git tags
+description = "Data Federation Mesh Workspace"
+authors = [{ name = "NVIDIA" }]
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+# No dependencies at workspace level - install individual packages as needed
+dependencies = [
+]
+
+[project.optional-dependencies]
+tutorials = [
+    "nv-dfm-lib-weather",
+    "jupyterlab",
+    "ipywidgets",
+    "leafmap",
+]
+
+[tool.uv]
+managed = true
+index-strategy = "unsafe-best-match"
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.workspace]
+members = ["packages/*",
+           "tutorials/example-fed/"  
+]
+
+[tool.uv.sources]
+nv-dfm-core = { workspace = true }
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
+torchaudio = { index = "pytorch-cu128" }
+nv-dfm-lib-common = { workspace = true }
+nv-dfm-lib-weather = { workspace = true }
+examplefed = { workspace = true }
+earth2studio = { git = "https://github.com/NVIDIA/earth2studio.git", rev = "f7fb900970a20b875c8aef2066f57c25bdda58c5" }
+cbottle = { git = "https://github.com/NickGeneva/cBottle.git", rev = "2efe844e772b5075f06f358eeeab587423628b61" }
+earth2grid = { git = "https://github.com/NVlabs/earth2grid.git", rev = "661445e2c68edc76f52632aa0528af482357f1b8" }
+makani = { git = "https://github.com/NVIDIA/makani.git", rev = "28f38e3e929ed1303476518552c64673bbd6f722" }
+
+[tool.uv.extra-build-dependencies]
+earth2grid = ["setuptools"]
+
+[dependency-groups]
+dev = [
+    "packaging>=24.1,<25.0.0",
+    "pytest>=8.3.2,<9.0.0",
+    "pytest-cov>=5.0.0,<6.0.0",
+    "pytest-asyncio>=0.24.0,<0.25.0",
+    "pytest-subtests>=0.14.1,<0.15.0",
+    "pylint>=3.2.7,<4.0.0",
+    "coloredlogs>=15.0.1,<16.0.0",
+    "ruff>=0.11.2,<0.12.0",
+    "basedpyright>=1.29.5,<2.0.0",
+    "iniconfig>=2.0.0,<2.1.0",
+    "coverage>=7.9.2,<7.10.0",
+    "python-gitlab>=4.0.0",
+]
+
+docs = [
+    "nv-dfm-core",
+    "myst-nb>=1.2.0",
+    "pydata-sphinx-theme>=0.16.1",
+    "sphinx-autodoc-typehints>=3.6.3",
+    "sphinx-design>=0.7.0",
+    "sphinx-favicon>=1.1.0",
+    "sphinx-gallery>=0.20.0",
+    "sphinx-togglebutton>=0.4.4",
+    "sphinx-copybutton>=0.5.2",
+    "sphinx>=9.1.0",
+]
+
+
+[tool.ruff]
+extend-exclude = ["tutorials/example-fed/examplefed/fed/**", "tutorials/weather_fed/weather_fed/fed/**", "tests/assets/golden/**", "**/_version.py"]
+
+[tool.ruff.lint]
+extend-select = ["I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["nv_dfm_core", "nv_dfm_lib_common", "nv_dfm_lib_weather", "examplefed", "nv_dfm_lib_all"]
+
+[tool.coverage.paths]
+source = [
+    "packages/nv-dfm-core/nv_dfm_core",
+    "packages/nv-dfm-lib-common/nv_dfm_lib_common",
+    "packages/nv-dfm-lib-weather/nv_dfm_lib_weather",
+    "tutorials/example-fed"
+]
+
+[tool.coverage.report]
+
+
+[tool.pyright]
+ignore = ["ci/**", "tests/assets/**", "**/fed/**", "playground/**", "**/_version.py"]
+reportAny = false
+reportExplicitAny = false
+reportCallInDefaultInitializer = false
+
+# Note: This is a virtual workspace - no build-system needed.
+# Individual packages in packages/* have their own build configurations.

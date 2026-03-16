@@ -1,0 +1,175 @@
+{#
+SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+#}
+
+{%- macro create_adapter_instance(is_provider, constructor) -%}
+    {%- if constructor is string %}
+        _adapter_params = inspect.signature({{ constructor }}).parameters
+        _adapter_kwargs = {}
+    {%- else %}
+        _adapter_params = inspect.signature({{ constructor.path }}).parameters
+        _adapter_kwargs = {{ constructor.args }}
+    {%- endif %}
+        if 'site' in _adapter_params:
+            _adapter_kwargs['site'] = {% if is_provider %}self.site{% else %}self{% endif %}
+        if 'provider' in _adapter_params:
+            _adapter_kwargs['provider'] = {% if is_provider %}self{% else %}None{% endif %}
+    {%- if constructor is string %}
+        self.adapter_{{ constructor.replace('.', '_') }} = {{ constructor }}(**_adapter_kwargs)
+    {%- else %}
+        self.adapter_{{ constructor.path.replace('.', '_') }} = {{ constructor.path }}(**_adapter_kwargs)
+    {%- endif %}
+        
+{%- endmacro -%}
+
+{%- macro prepare_adapter_arg(arg_name, arg_conf) -%}
+    {%- if arg_conf.from_param %}
+        {{ arg_name }} = kwargs.get("{{ arg_conf.from_param }}", None)
+    {%- elif arg_conf.from_secrets %}
+        {{ arg_name }} = self.site.secret_for_key("{{ arg_conf.from_secrets }}")
+    {%- elif arg_conf.const %}
+        {{ arg_name }} = {{ json.dumps(arg_conf.const) }}
+    {%- elif arg_conf.from_provider %}
+        {{ arg_name }} = self.site.provider_{{ arg_conf.from_provider.split('.')[0] }}.{{ arg_conf.from_provider.split('.')[1] }}
+    {%- elif arg_conf.from_site %}
+        {{ arg_name }} = self.site.{{ arg_conf.from_site }}
+    {%- endif %}
+{%- endmacro -%}
+
+{%- macro prepare_adapter_call(adapter) -%}
+    # prepare arguments
+    {%- if adapter.args != "from-operation" %}
+    {%- for arg_name, arg_conf in adapter.args.items() -%}
+        {{ prepare_adapter_arg(arg_name, arg_conf) }}
+    {%- endfor %}
+    {%- endif %}
+        # handle exposed args (if any)
+    {%- if adapter.args != "from-operation" %}
+    {%- for arg_name, arg_conf in adapter.args.items() %}
+    {%- if arg_conf.expose_as %}
+        {{ arg_name }} = kwargs.get("{{ arg_conf.expose_as.param }}", None) or {{ arg_name }}
+    {%- endif %}
+    {%- endfor %}
+    {%- endif %}
+        # assemble into a dict
+    {%- if adapter.args == "from-operation" %}
+        _dfm_prepped_kwargs_ = kwargs
+    {%- else %}
+        _dfm_prepped_kwargs_ = {
+    {%- for arg_name, arg_conf in adapter.args.items() %}
+           "{{ arg_name }}": {{ arg_name }},
+    {%- endfor %}
+        }
+    {%- endif %}
+    {%- endmacro -%}
+
+{% macro create_interface(op_ref, adapter) -%}
+    {%- set adapter_var = "self.adapter_" ~ (adapter.adapter.replace('.', '_') if adapter.adapter is string else adapter.adapter.path.replace('.', '_') if adapter.adapter else "") -%}
+    {%- set adapter_class = (adapter.adapter if adapter.adapter is string else adapter.adapter.path if adapter.adapter else "").split('.')[-1] -%}
+    {%- set operation_name = op_ref.split('/')[-1] -%}
+    {%- if adapter.is_async -%}
+    async {% 
+endif -%}
+    def call_{{ operation_name.replace('.', '_') }}(self, **kwargs):
+        {{ prepare_adapter_call(adapter) }}
+        # call adapter with telemetry
+        with nv_dfm_core.telemetry.adapter_span(self.dfm_context, "{{ adapter_class }}", "{{ operation_name }}") as _dfm_span_:
+            _dfm_result_ = {% if adapter.is_async %}await {% endif %}{{ adapter_var }}.body(**_dfm_prepped_kwargs_)
+            if _dfm_span_:
+                _dfm_span_.set_ok()
+            return _dfm_result_
+
+    async def discover_{{ operation_name.replace('.', '_') }}(self, **kwargs):
+        {{ prepare_adapter_call(adapter) }}
+        return await nv_dfm_core.exec.discovery.AdviceBuilder.build_advice(adapter={{ adapter_var }}, **_dfm_prepped_kwargs_)
+{% endmacro -%}
+
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+THIS FILE WAS GENERATED BY DFM-APIGEN. DO NOT MODIFY.
+"""
+
+import inspect
+
+import nv_dfm_core.exec
+import nv_dfm_core.exec.discovery
+import nv_dfm_core.telemetry
+{%- if site.impl is string %}
+import {{ site.impl.rpartition('.')[0] }}
+{%- elif site.impl %}
+import {{ site.impl.path.rpartition('.')[0] }}
+{%- endif %}
+from nv_dfm_core.exec import FsspecConfig, SecretsVaultConfig
+
+{%- for provider in site.providers.values() %}
+{%- if provider.impl is string %}
+import {{ provider.impl.rpartition('.')[0] }}
+{%- elif provider.impl %}
+import {{ provider.impl.path.rpartition('.')[0] }}
+{%- endif %}
+{%- endfor %}
+
+{%- for adapter_import in site.collect_all_adapter_imports() %}
+import {{ adapter_import }}
+{%- endfor %}
+{% for pname, provider in site.providers.items() %}
+class {{pname }}({% if provider.impl is string %}{{ provider.impl }}{% elif provider.impl %}{{ provider.impl.path }}{% else %}nv_dfm_core.exec.Provider{% endif %}):
+    def __init__(self, site: nv_dfm_core.exec.Site):
+        super().__init__(site=site{% if provider.impl.args %}, **{{ provider.impl.args }}{% endif %})
+        # adapters
+        {%- for adapter in provider.interface.values() -%}
+        {{ create_adapter_instance(True, adapter.adapter) }}
+        {%- endfor %}
+
+    {% for op_ref, adapter in provider.interface.items() -%}
+    {{ create_interface(op_ref, adapter) }}
+    {% endfor %}
+{%- endfor %}
+
+class ThisSite({% if site.impl is string %}{{ site.impl }}{% elif site.impl %}{{ site.impl.path }}{% else %}nv_dfm_core.exec.Site{% endif %}):
+    def __init__(self, dfm_context: nv_dfm_core.exec.DfmContext):
+        super().__init__(
+            dfm_context=dfm_context,
+            cache_config={{ site.cache_config.to_python() }},
+            secrets_vault_config={{ site.secrets_vault.to_python() }}{% if site.impl.args %},
+            **{{ site.impl.args }}{% endif %}
+        )
+        # providers
+        {%- for pname, provider in site.providers.items() %}
+        self.{{ pname }} = {{ pname }}(self)
+        {%- endfor %}
+        # adapters
+        {%- for adapter in site.interface.values() -%}
+        {{ create_adapter_instance(False, adapter.adapter) }}
+        {%- endfor %}
+    
+    {% for op_ref, adapter in site.interface.items() -%}
+    {{ create_interface(op_ref, adapter) }}
+    {% endfor %}

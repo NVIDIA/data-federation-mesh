@@ -1,0 +1,52 @@
+{
+  "sites": {
+    "concierge": {
+      "interface": {
+        "users.GreetMe": {
+          "operation": "users.GreetMe",
+          "compute_cost": {
+            "fixed_time": 1000000.0,
+            "compute_throughput": null,
+            "fixed_size": 10000000,
+            "output_factor": 0.0
+          },
+          "is_async": true
+        }
+      },
+      "providers": {},
+      "send_cost": {}
+    },
+    "server": {
+      "interface": {
+        "users.GreetMe": {
+          "operation": "users.GreetMe",
+          "compute_cost": {
+            "fixed_time": 1000000.0,
+            "compute_throughput": null,
+            "fixed_size": 10000000,
+            "output_factor": 0.0
+          },
+          "is_async": true
+        }
+      },
+      "providers": {},
+      "send_cost": {}
+    },
+    "reception": {
+      "interface": {
+        "users.GreetMe": {
+          "operation": "users.GreetMe",
+          "compute_cost": {
+            "fixed_time": 1000000.0,
+            "compute_throughput": null,
+            "fixed_size": 10000000,
+            "output_factor": 0.0
+          },
+          "is_async": true
+        }
+      },
+      "providers": {},
+      "send_cost": {}
+    }
+  }
+}

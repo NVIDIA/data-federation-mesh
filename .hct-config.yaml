@@ -1,0 +1,115 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Configuration schema version (required)
+version: "1.0.0"
+
+# Project name (optional)
+name: "NVIDIA Data Federation Mesh"
+
+# Project description (optional)
+description: "Data Federation Mesh"
+
+# Settings configuration
+settings:
+  # License header configuration (optional)
+  # Use 'hct license check' to find files missing headers
+  # Use 'hct license add' to add headers to files
+  license:
+    default_license: apache-2.0  # or: apache-2.0, mit
+    copyright_holder: "NVIDIA CORPORATION & AFFILIATES"
+    copyright_year: "2026"  # Pin to match repo headers; optional, defaults to current year
+    include_patterns:
+      - "*.py"
+      - "*.sh"
+      - "*.yaml"
+      - "*.yml"
+      - "*.toml"
+      - "*.properties"
+      - "*.ini"
+      - "Dockerfile*"
+      - "*.tpl"
+      - "*.jinja"
+      - "*.jinja2"
+      - "*.md"
+      - ".helmignore"
+      - ".dockerignore"
+      - ".gitignore"
+      - ".gitattributes"
+    exclude_patterns:
+      - "**/node_modules/**"
+      - "**/.venv/**"
+      - "**/__pycache__/**"
+      - "**/README.md"
+      - "SECURITY.md"
+      - "CODE_OF_CONDUCT.md"
+      - "CONTRIBUTING.md"
+      - "CHANGELOG.md"
+      - "HISTORY.md"
+      - "RELEASE_NOTES.md"
+      - "README.md"
+      - "LICENSE"
+
+  # Use 'hct export' to copy files to a clean directory for publishing.
+  # This is destination-agnostic - use for GitHub, GitLab, Artifactory, etc.
+  export:
+    include:
+      - ".github/**"
+      - "ci/docker/Dockerfile.gh.ci"
+      - "ci/scripts/python-build-docs-gh.sh"
+      - "ci/scripts/python-test-package.sh"
+      - "ci/scripts/common-python.sh"
+      - "ci/scripts/python-run-lint.sh"
+      - "ci/scripts/python-build-wheels-gh.sh"
+      - "ci/scripts/python-run-format.sh"
+      - "docs/"
+      - "packages/"
+      - "tests/*"
+      - "tests/unit/**"
+      - "tests/helpers/**"
+      - "tests/assets/**"
+      - "tutorials/"
+      - ".dfm-cli.conf.yaml"
+      - ".dockerignore"
+      - ".git"
+      - ".gitattributes"
+      - ".gitignore"
+      - ".hct-config.yaml"
+      - ".hypothesis"
+      - "INSTALL.md"
+      - "README.md"
+      - "LICENSE"
+      - "SECURITY.md"
+      - "CODE_OF_CONDUCT.md"
+      - "pyproject.toml"
+      - "pytest.ini"
+      - "federations.yaml"
+      - "uv.lock"
+    exclude:
+      - "**/__pycache__/"
+      - "**/*.pyc"
+    export_dir: ".export"
+
+  publish:
+    pypi:
+      - project_id: 1454
+        project_name: "nv_dfm_core"
+        pic: "jzielinski@nvidia.com"
+      - project_id: 1455
+        project_name: "nv_dfm_lib_common"
+        pic: "jzielinski@nvidia.com"
+      - project_id: 1456
+        project_name: "nv_dfm_lib_weather"
+        pic: "jzielinski@nvidia.com"

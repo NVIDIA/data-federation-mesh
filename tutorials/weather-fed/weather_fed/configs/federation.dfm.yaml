@@ -1,0 +1,97 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+dfm: 1.0.0
+info:
+  api-version: 0.1.0
+  code-package: weather_fed
+  description: "A test federation for the DFM adapter library nv-dfm-lib-weather"
+provision: {}
+operations:
+  # Data loading operations
+  # GFS
+  $ref:
+  - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/load_data/gfs_era5.yaml#/operation"
+  # ECMWF
+  - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/load_data/ecmwf_era5.yaml#/operation"
+  # HRRR
+  - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/load_data/hrrr_era5.yaml#/operation"
+  # CMIP6 
+  - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/load_data/cmip6.yaml#/operation"
+  # CBottle
+  - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/cbottle/data_gen.yaml#/operation"
+  - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/cbottle/infilling.yaml#/operation"
+  - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/cbottle/super_resolution.yaml#/operation"
+  - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/cbottle/tc_guidance.yaml#/operation"
+  - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/cbottle/video.yaml#/operation"
+  # Xarray operations
+  - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/xarray/convert_to_uint8.yaml#/operation"
+  - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/xarray/render_uint8_to_images.yaml#/operation"
+  - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/xarray/variable_norm.yaml#/operation"
+  # SFNO operations
+  - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/sfno/sfno_prognostic.yaml#/operation"
+sites:
+  server:
+    info:
+      description: "Server, necessary for Flare"
+    impl: nv_dfm_lib_weather.site.ModelCacheSite
+    interface:
+      $ref:
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/load_data/gfs_era5.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/load_data/ecmwf_era5.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/load_data/hrrr_era5.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/load_data/cmip6.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/xarray/convert_to_uint8.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/xarray/render_uint8_to_images.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/xarray/variable_norm.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/sfno/sfno_prognostic.yaml#/interface"
+  client1:
+    info:
+      description: "The client site 1"
+    impl: nv_dfm_lib_weather.site.ModelCacheSite
+    interface:
+      $ref:
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/load_data/gfs_era5.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/load_data/ecmwf_era5.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/load_data/hrrr_era5.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/load_data/cmip6.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/xarray/convert_to_uint8.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/xarray/render_uint8_to_images.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/xarray/variable_norm.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/sfno/sfno_prognostic.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/cbottle/data_gen.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/cbottle/infilling.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/cbottle/super_resolution.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/cbottle/tc_guidance.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/cbottle/video.yaml#/interface"
+  homesite:
+    info:
+      description: "The nvidia datacenter site"
+    impl: nv_dfm_lib_weather.site.ModelCacheSite
+    interface:
+      $ref:
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/load_data/gfs_era5.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/load_data/ecmwf_era5.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/load_data/hrrr_era5.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/load_data/cmip6.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/xarray/convert_to_uint8.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/xarray/render_uint8_to_images.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/xarray/variable_norm.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/sfno/sfno_prognostic.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/cbottle/data_gen.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/cbottle/infilling.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/cbottle/super_resolution.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/cbottle/tc_guidance.yaml#/interface"
+      - "packages/nv-dfm-lib-weather/nv_dfm_lib_weather/configs/cbottle/video.yaml#/interface"

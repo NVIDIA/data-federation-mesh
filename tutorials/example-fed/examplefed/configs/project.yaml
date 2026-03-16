@@ -1,0 +1,89 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This is config file for provisioning in NVIDIA Flare
+# See https://nvflare.readthedocs.io/en/2.6.2/real_world_fl/overview.html for details
+api_version: 3
+name: examplefed
+description: A small federation with very limited functionality.
+
+participants:
+  # Change the name of the server (server1) to the Fully Qualified Domain Name
+  # (FQDN) of the server, for example: server1.example.com.
+  # Ensure that the FQDN is correctly mapped in the /etc/hosts file.
+
+  # NOTE(ca): patched nvflare.apis.utils.format_check.py::name_check to return False if mapping doesn't contain the type
+  # See https://nvflare.readthedocs.io/en/2.6.2/programming_guide/provisioning_system.html#provisioning for details
+  
+  - name: concierge@examplefed.com
+    type: admin
+    org: nvidia
+    role: project_admin
+  - name: server
+    type: server
+    org: nvidia
+    fed_learn_port: 8002
+    admin_port: 8003
+  # Workers
+  - name: reception
+    type: client
+    org: nvidia
+
+# The same methods in all builders are called in their order defined in builders section
+builders:
+  - path: nvflare.lighter.impl.workspace.WorkspaceBuilder
+    args:
+      template_file:
+        - master_template.yml
+        - aws_template.yml
+        - azure_template.yml
+  - path: nvflare.lighter.impl.template.TemplateBuilder
+  - path: nvflare.lighter.impl.static_file.StaticFileBuilder
+    args:
+      # config_folder can be set to inform NVIDIA FLARE where to get configuration
+      config_folder: config
+
+      # scheme for communication driver (currently supporting the default, grpc, only).
+      # scheme: grpc
+
+      # app_validator is used to verify if uploaded app has proper structures
+      # if not set, no app_validator is included in fed_server.json
+      # app_validator: PATH_TO_YOUR_OWN_APP_VALIDATOR
+
+      # when docker_image is set to a docker image name, docker.sh will be generated on server/client/admin
+      # docker_image:
+
+      # download_job_url is set to http://download.server.com/ as default in fed_server.json.  You can override this
+      # to different url.
+      # download_job_url: http://download.server.com/
+
+      overseer_agent:
+        path: nvflare.ha.dummy_overseer_agent.DummyOverseerAgent
+        # if overseer_exists is true, args here are ignored.  Provisioning
+        #   tool will fill role, name and other local parameters automatically.
+        # if overseer_exists is false, args in this section will be used and the sp_end_point
+        # must match the server defined above in the format of SERVER_NAME:FL_PORT:ADMIN_PORT
+        # 
+        overseer_exists: false
+        args:
+          sp_end_point: flare-dfm-flare-server:8002:8003
+
+  #- path: dfm.provisioning.builder.DfmClientApiBuilder
+  #  args:
+  #    config_folder: configs
+  - path: nvflare.lighter.impl.cert.CertBuilder
+  - path: nvflare.lighter.impl.signature.SignatureBuilder
+  - path: nv_dfm_core.targets.flare.builder.WorkspaceArchiveBuilder
+

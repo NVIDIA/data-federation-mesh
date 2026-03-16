@@ -1,0 +1,68 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+operation:
+  cbottle.CbottleSuperResolution:
+    description: "Performs super-resolution on a low-resolution dataset using CBottleSR to produce high-resolution outputs"
+    parameters:
+      dataset:
+        description: "Input xarray.Dataset with variables and dims including 'time', 'lat', 'lon'"
+        type: object
+      output_resolution:
+        description: "Target high-resolution (nlat, nlon). If omitted, model default is used"
+        type: array
+      super_resolution_window:
+        description: "Optional geographic window (lat_s, lon_w, lat_n, lon_e) for regional SR"
+        type: array
+      sampler_steps:
+        description: "Number of sampling steps for the diffusion process (default: 18)"
+        type: integer
+      sigma_max:
+        description: "Maximum noise level for the diffusion process (default: 800.0)"
+        type: number
+      seed:
+        description: "Random seed for reproducibility (default: None)"
+        type: integer
+      device:
+        description: "Device to use for model inference. Options: 'cuda', 'cuda:N', 'cpu', or None for auto-select"
+        type: string
+      lat_lon:
+        description: "Whether to return data on a lat/lon grid or a nested HealPix grid (default: True)"
+        type: boolean
+    required:
+      - dataset
+    returns: object
+interface:
+  "#/operations/cbottle.CbottleSuperResolution":
+    adapter: nv_dfm_lib_weather.cbottle.CbottleSuperResolution
+    description: "Performs super-resolution on a low-resolution dataset using CBottleSR to produce high-resolution outputs"
+    is-async: true
+    args:
+      dataset:
+        from-param: dataset
+      output_resolution:
+        from-param: output_resolution
+      super_resolution_window:
+        from-param: super_resolution_window
+      sampler_steps:
+        from-param: sampler_steps
+      sigma_max:
+        from-param: sigma_max
+      seed:
+        from-param: seed
+      device:
+        from-param: device
+      lat_lon:
+        from-param: lat_lon

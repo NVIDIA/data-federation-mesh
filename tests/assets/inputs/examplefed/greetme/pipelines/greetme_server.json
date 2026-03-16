@@ -1,0 +1,20 @@
+{
+    "api_version": "0.0.1",
+    "mode": "execute",
+    "target": "flare",
+    "body": [
+        {
+            "dfm_class_name": "examplefed.fed.api.users.GreetMe",
+            "site": "server",
+            "provider": null,
+            "node_id": { "tag": "@dfm-node", "ident": 0 },
+            "name": { "tag": "@dfm-place-param", "place": "name" }
+        },
+        {
+            "dfm_class_name": "nv_dfm_core.api.Yield",
+            "node_id": { "tag": "@dfm-node", "ident": 1 },
+            "value": { "id": { "tag": "@dfm-node", "ident": 0 }, "sel": null },
+            "place": "yield"	
+        }
+    ]
+}

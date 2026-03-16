@@ -1,0 +1,65 @@
+#!/bin/bash
+{#
+SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+#}
+
+set -e
+
+PLATFORM="linux/{{ provision.docker.build.arch }}"
+FILE="{{ provision.docker.dockerfile.dir }}/{{ provision.docker.dockerfile.file }}"
+CONTEXT="{{ provision.docker.build.context | default('.') }}"
+IMAGE="{{ provision.docker.image }}"
+TAG="{{ provision.docker.tag }}"
+DOCKER="{{ provision.docker.build.engine }}"
+{%- if provision.docker.build.engine == "podman" %}
+FORMAT="--format=docker" 
+{%- endif %}
+
+if [[ ! -f $FILE ]]; then
+    echo "Dockerfile not found at $FILE"
+    echo "Did you forget to change directory?"
+    exit 1
+fi
+
+# Build image
+$DOCKER build -t $IMAGE:$TAG  --platform $PLATFORM $FORMAT -f $FILE $CONTEXT
+
+{%- if provision.docker.build.save.enabled %}
+
+# Save image
+IMAGE_FILE="{{provision.docker.build.save.file}}"
+mkdir -p $(dirname $IMAGE_FILE)
+$DOCKER save --output $IMAGE_FILE $IMAGE:$TAG
+
+{%- endif %}
+
+{%- if provision.docker.build.push.enabled %}
+
+# Push image to repo
+REPO="{{ provision.docker.build.push.registry.url }}"
+USERNAME="{{ provision.docker.build.push.registry.username }}"
+PASSWORD="{{ provision.docker.build.push.registry.password }}"
+
+if [[ -n $USERNAME && -n $PASSWORD ]]; then
+    echo $PASSWORD | $DOCKER login $REPO --username $USERNAME --password-stdin
+fi
+
+NAME=$REPO/$IMAGE:$TAG
+
+$DOCKER tag $IMAGE:$TAG $NAME
+$DOCKER push $NAME
+
+{%- endif %}

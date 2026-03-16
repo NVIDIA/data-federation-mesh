@@ -1,0 +1,49 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+operation:
+  xarray.VariableNorm:
+    description: "Computes the p-norm of specified variables in a dataset"
+    parameters:
+      data:
+        description: "The xarray dataset to compute norm from"
+        type: object
+      variables:
+        description: "The list of variables to compute norm for"
+        type: array
+      output_name:
+        description: "The name of the output variable"
+        type: string
+      p:
+        description: "The p value for the norm calculation (default: 2.0)"
+        type: number
+    required:
+      - data
+      - variables
+    returns: object
+interface:
+  "#/operations/xarray.VariableNorm":
+    adapter: nv_dfm_lib_weather.xarray.VariableNorm
+    description: "Computes the p-norm of specified variables in a dataset"
+    is-async: true
+    args:
+      data:
+        from-param: data
+      variables:
+        from-param: variables
+      output_name:
+        from-param: output_name
+      p:
+        from-param: p
