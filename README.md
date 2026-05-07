@@ -116,6 +116,8 @@ uv sync --all-packages --extra tutorials
 
 ## Overview
 
+[![Watch the video](https://img.youtube.com/vi/H-MeW-Y8icU/hqdefault.jpg)](https://www.youtube.com/watch?v=H-MeW-Y8icU)
+
 DFM is a programmable framework for managing and orchestrating various services, distributed across potentially numerous sites, to collaborate and implement common functionalities. It is engineered to deliver "glue code as a service" to facilitate creating of complex pipelines and workflows to process data.
 
 <div align="center">
