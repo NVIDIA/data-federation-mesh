@@ -117,8 +117,10 @@ class LocalSessionDelegate(SessionDelegate):
         Note:
             In local mode, jobs are tracked in-memory by the `FederationRunner` instance created by
             this Session's `connect()`. Reattachment therefore requires:
-              - the same OS process, AND
-              - the same connected Session (i.e., the same `FederationRunner` instance).
+
+            - the same OS process, AND
+            - the same connected Session (i.e., the same `FederationRunner` instance).
+
             Reattachment works for both running and finished jobs for the lifetime of that runner.
         """
         if not self._federation:

@@ -27,9 +27,12 @@ Key concepts:
 from __future__ import annotations
 
 import asyncio
+import logging
 import queue
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, Literal, TypeAlias
+
+_logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from nv_dfm_core.exec import Frame, TokenPackage
@@ -96,6 +99,23 @@ def callbacks_kind(
     return "async" if async_count > 0 else "sync"
 
 
+def _select_error_callback(
+    default_callback: DfmDataCallback | None,
+    place_callbacks: dict[str, DfmDataCallback] | None,
+) -> DfmDataCallback | None:
+    """Pick the callback that should receive a synthesized decode-error ErrorToken.
+
+    Policy: the status-place callback if the user registered one, otherwise the
+    default callback. This mirrors the server/worker error path, which yields
+    ErrorTokens to the status place.
+    """
+    from nv_dfm_core.api._yield import STATUS_PLACE_NAME
+
+    if place_callbacks and STATUS_PLACE_NAME in place_callbacks:
+        return place_callbacks[STATUS_PLACE_NAME]
+    return default_callback
+
+
 def call_callbacks(
     default_callback: DfmDataCallback | None,
     place_callbacks: dict[str, DfmDataCallback] | None,
@@ -105,6 +125,13 @@ def call_callbacks(
 
     This unifies the callback invocation logic from FlareJob._distribute_tokens()
     and LocalJob._invoke_token_callback().
+
+    A token's payload is deserialized here (``unwrap_data()``), on the app side,
+    which can fail for a malformed, corrupted, or version-skewed yield. Rather
+    than letting that failure escape (crashing the receive thread or the caller's
+    ``process_pending()`` thread) or being silently dropped, it is surfaced to the
+    user as an ``ErrorToken`` via the status/default callback -- see
+    ``_select_error_callback``.
 
     Args:
         default_callback: Fallback callback for tokens without a place-specific callback.
@@ -124,14 +151,62 @@ def call_callbacks(
         elif default_callback:
             callback = default_callback
 
+        try:
+            data = token.unwrap_data()
+        except Exception as e:  # noqa: BLE001 - surface any decode failure to the user
+            _deliver_decode_error(default_callback, place_callbacks, token, e)
+            continue
+
         if callback is not None:
             callback(
                 token.source_site,
                 token.source_node,
                 token.frame,
                 token.target_place,
-                token.unwrap_data(),
+                data,
             )
+
+
+def _deliver_decode_error(
+    default_callback: DfmDataCallback | None,
+    place_callbacks: dict[str, DfmDataCallback] | None,
+    token: TokenPackage,
+    error: Exception,
+) -> None:
+    """Surface a payload-deserialization failure to the user as an ErrorToken.
+
+    Sync path. Never raises: a missing error callback is logged, and an error
+    callback that itself raises is logged rather than allowed to tear down the
+    receive/processing thread.
+    """
+    from nv_dfm_core.api._error_token import ErrorToken
+
+    error_callback = _select_error_callback(default_callback, place_callbacks)
+    if error_callback is None:
+        _logger.warning(
+            "Failed to deserialize inbound token for place '%s' from site '%s' and "
+            "no status/default callback is registered to receive the error: %s",
+            token.target_place,
+            token.source_site,
+            error,
+        )
+        return
+
+    try:
+        error_callback(
+            token.source_site,
+            token.source_node,
+            token.frame,
+            token.target_place,
+            ErrorToken.from_exception(error),
+        )
+    except Exception as cb_err:  # noqa: BLE001 - a user callback must not kill the thread
+        _logger.error(
+            "Callback raised while reporting a token-deserialization error for "
+            "place '%s': %s",
+            token.target_place,
+            cb_err,
+        )
 
 
 async def call_callbacks_async(
@@ -159,14 +234,59 @@ async def call_callbacks_async(
         elif default_callback:
             callback = default_callback
 
+        try:
+            data = token.unwrap_data()
+        except Exception as e:  # noqa: BLE001 - surface any decode failure to the user
+            await _deliver_decode_error_async(
+                default_callback, place_callbacks, token, e
+            )
+            continue
+
         if callback is not None:
             await callback(  # type: ignore[misc]
                 token.source_site,
                 token.source_node,
                 token.frame,
                 token.target_place,
-                token.unwrap_data(),
+                data,
             )
+
+
+async def _deliver_decode_error_async(
+    default_callback: DfmDataCallback | None,
+    place_callbacks: dict[str, DfmDataCallback] | None,
+    token: TokenPackage,
+    error: Exception,
+) -> None:
+    """Async counterpart of ``_deliver_decode_error``. Never raises."""
+    from nv_dfm_core.api._error_token import ErrorToken
+
+    error_callback = _select_error_callback(default_callback, place_callbacks)
+    if error_callback is None:
+        _logger.warning(
+            "Failed to deserialize inbound token for place '%s' from site '%s' and "
+            "no status/default callback is registered to receive the error: %s",
+            token.target_place,
+            token.source_site,
+            error,
+        )
+        return
+
+    try:
+        await error_callback(  # type: ignore[misc]
+            token.source_site,
+            token.source_node,
+            token.frame,
+            token.target_place,
+            ErrorToken.from_exception(error),
+        )
+    except Exception as cb_err:  # noqa: BLE001 - a user callback must not kill the thread
+        _logger.error(
+            "Callback raised while reporting a token-deserialization error for "
+            "place '%s': %s",
+            token.target_place,
+            cb_err,
+        )
 
 
 # -----------------------------------------------------------------------------
@@ -181,9 +301,8 @@ class CallbackRunner(ABC):
     The runner is bound to the callbacks provided at creation time
     and dispatches tokens to them according to the dispatcher's strategy.
 
-    Attributes:
-        default_callback: The default callback for unspecified places.
-        place_callbacks: Dictionary mapping place names to specific callbacks.
+    The ``default_callback`` and ``place_callbacks`` properties expose the
+    callbacks supplied at creation time.
     """
 
     def __init__(
@@ -277,7 +396,8 @@ class DirectDispatcher(CallbackDispatcher):
     Note: DirectDispatcher only supports synchronous callbacks. If you need
     to use async callbacks, use AsyncioDispatcher instead.
 
-    Example:
+    Example::
+
         # Explicit usage (same as default behavior)
         session = Session(
             federation_name="my_fed",
@@ -411,7 +531,8 @@ class ManualDispatcher(CallbackDispatcher):
     This is useful for applications like Kit that need callbacks to run
     on the main thread.
 
-    Example:
+    Example::
+
         # Setup
         session = Session(
             federation_name="my_fed",
@@ -484,7 +605,8 @@ class AsyncioDispatcher(CallbackDispatcher):
     Note: AsyncioDispatcher only supports asynchronous callbacks. If you need
     to use sync callbacks, use DirectDispatcher instead.
 
-    Example:
+    Example::
+
         # Use current event loop (resolved lazily)
         session = Session(
             federation_name="my_fed",

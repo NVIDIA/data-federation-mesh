@@ -79,16 +79,18 @@ function install_python_deps {
         UV_ARGS="${UV_ARGS} --dev"
     fi
     
-    # Add test and docs extras for packages that have test dependencies
+    # Add the test dependency-group for packages that have test dependencies.
+    # (examplefed moved from an nv-dfm-core `test` extra to the root `test`
+    # dependency-group to avoid publishing it in wheel metadata.)
     if [ "$DEV_MODE" = "dev" ] && [ "$PACKAGE_NAME" = "nv-dfm-core" ]; then
-        UV_ARGS="${UV_ARGS} --extra test"
+        UV_ARGS="${UV_ARGS} --group test"
     fi
     
     echo "Installing dependencies with: uv sync $UV_ARGS"
     
     # Set longer network timeout for uv (default is 30s)
     export UV_HTTP_TIMEOUT="${UV_HTTP_TIMEOUT:-300}"
-    
+
     # Use uv to install the dependencies with retry logic
     # Note: We disable set -e temporarily to allow retries
     local RETRIES=3

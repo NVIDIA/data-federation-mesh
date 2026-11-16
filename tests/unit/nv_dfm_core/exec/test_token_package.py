@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 from typing import Literal
 
 import pytest
@@ -238,3 +237,63 @@ def test_non_pydantic_class():
 
     with pytest.raises(ValueError, match="is not a Pydantic model"):
         _ = TokenPackage.model_validate(serialized).unwrap_data()
+
+
+def _malformed_package(tagged_data):
+    """Build a TokenPackage carrying attacker-controlled tagged_data."""
+    return {
+        "source_site": "site1",
+        "source_node": 1,
+        "source_job": "job1",
+        "target_job": "job1",
+        "is_yield": False,
+        "target_site": "site3",
+        "target_place": "place1",
+        "frame": Frame.start_frame(0).model_dump(),
+        "tagged_data": tagged_data,
+    }
+
+
+@pytest.mark.parametrize(
+    "tagged_data",
+    [
+        # A peer/compromised site can send these shapes. Before the
+        # fix each raised an uncaught AssertionError/KeyError out of unwrap_data(),
+        # crashing the receiving node (remote DoS). They must now raise ValueError,
+        # which is the only exception caught on the token-routing path.
+        ("BaseModel", "not-a-dict"),
+        ("BaseModel", ["not", "a", "dict"]),
+        ("BaseModel", 42),
+        ("BaseModel", {"data": {"name": "test"}}),  # missing 'class'
+        ("BaseModel", {"class": "test_token_package.SimpleModel"}),  # missing 'data'
+        ("BaseModel", {"class": 123, "data": {}}),  # non-string 'class'
+        # class_path resolves to a non-class (function) -> issubclass() TypeError
+        ("BaseModel", {"class": "json.dumps", "data": {}}),
+        ("BaseModel", {"class": "os.getpid", "data": {}}),
+        ("PickledObject", "not-a-dict"),
+        ("PickledObject", 42),
+        ("PickledObject", {"value": 123}),  # non-str value -> AssertionError path
+        ("PickledObject", {"value": None}),
+        ("PickledObject", {"value": "!!!not-base64!!!"}),  # bad base64
+    ],
+)
+def test_malformed_tagged_data_raises_valueerror(tagged_data):
+    """Malformed attacker-controlled payloads must raise ValueError, never a bare
+    AssertionError/KeyError that would crash the receiver."""
+    with pytest.raises(ValueError):
+        _ = TokenPackage.model_validate(_malformed_package(tagged_data)).unwrap_data()
+
+
+def test_pickled_object_bogus_global_raises_valueerror():
+    """A crafted PickledObject whose base64 decodes to a pickle referencing a
+    non-existent module makes pickle.loads raise ModuleNotFoundError (not in the
+    originally-caught set). It must be remapped to ValueError, not escape and
+    crash the receiver (residual DoS)."""
+    import base64
+
+    # Protocol-0 GLOBAL opcode ('c<module>\n<name>\n') + STOP ('.') referencing a
+    # module that does not exist -> pickle.loads raises ModuleNotFoundError.
+    bogus = base64.b64encode(b"c__no_such_module_xyz__\nfoo\n.").decode()
+    pkg = _malformed_package(("PickledObject", {"value": bogus}))
+    with pytest.raises(ValueError):
+        _ = TokenPackage.model_validate(pkg).unwrap_data()

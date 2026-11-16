@@ -64,18 +64,12 @@ uv sync --package nv-dfm-lib-weather --extra cbottle
 
 ### GPU Prerequisites for AI Model Adapters
 
-The SFNO and cBottle adapters perform GPU-accelerated AI inference. Before installing these extras, ensure you have:
-
-- **NVIDIA GPU** with compute capability ≥ 8.9 and ≥ 40 GB GPU memory. See [CUDA GPUs](https://developer.nvidia.com/cuda-gpus).
-- **NVIDIA GPU Drivers** — see the [Driver Installation Guide](https://docs.nvidia.com/datacenter/tesla/driver-installation-guide/index.html).
-- **CUDA Toolkit 12.8** (tested) — see [CUDA Downloads](https://developer.nvidia.com/cuda-downloads).
-- **PyTorch with CUDA support** matching your toolkit version — see [pytorch.org](https://pytorch.org/). Example:
-  ```bash
-  pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-  ```
-- **[Earth2Studio 0.10.0](https://nvidia.github.io/earth2studio/v/0.10.0/userguide/about/install.html)** — installed automatically as a dependency. See the Earth2Studio docs for model-specific setup details.
-
-> **Note:** The `cbottle` and `sfno` extras depend on packages (`cbottle`, `earth2grid`, `makani`) that are not published on PyPI. When installing from source with `uv`, these resolve automatically via workspace git sources. When installing the published wheel via `pip`, users must install them manually — a clear error message with instructions is shown at runtime if they are missing.
+The SFNO and cBottle adapters require GPU hardware, drivers and model-specific
+prerequisites. Follow the [AI Model Adapters installation guide](https://nvidia.github.io/data-federation-mesh/userguide/about/installation.html#ai-model-adapters-sfno-cbottle)
+for the tested CUDA 12.9 / PyTorch cu129 / Earth2Studio 0.16 environment and the
+additional source-built model dependencies. Install those prerequisites before
+installing the published `sfno` or `cbottle` extra. Source installs with `uv` use
+the workspace's pinned model sources.
 
 ## Adapters
 

@@ -38,7 +38,7 @@ In this part of the How-To, we will show how to create your first Data Federatio
 
 Before starting this guide, you need:
 
-1. **Python 3.10 or higher**: Installed on your system (check with `python --version`) along with `pip` and `venv`
+1. **Python 3.10–3.12**: Installed on your system (check with `python --version`) along with `pip` and `venv`. Use Python 3.12 if you plan to continue with the weather tutorials.
 2. **Basic Python Knowledge**: Familiarity with Python, async functions, and virtual environments
 3. **Your Code**: The `plot_gradient.py` file with the three functions described above
 
@@ -62,7 +62,7 @@ python -m venv .venv
 ```
 
 ```{note}
-Make sure you have Python 3.10 or higher installed with `pip` and `venv`.
+Make sure you have Python 3.10–3.12 installed with `pip` and `venv`.
 ```
 
 ### Activate the Virtual Environment
@@ -195,7 +195,7 @@ operations:
 - **`returns`**: Return type as a string
 
 ```{note}
-The `object` type represents a generic Python object which will be Pickled when sent between DFM sites, and the `array` type represents a Python `list` (not a tuple!).
+The `object` and `array` declarations are JSON Schema types. An `array` field is represented as a Python list; Pydantic can also coerce tuple inputs to that list. Do not use `object` as a promise that arbitrary Python arguments are accepted: see the [configuration guide](https://nvidia.github.io/data-federation-mesh/userguide/development/federation_configuration.html) for typed Pydantic values and `nv_dfm_core.api.PickledObject`. The NumPy results in this tutorial flow between operations through node references.
 ```
 
 #### Define the Subset Operation:
@@ -341,7 +341,7 @@ Now, we will define the `loader` site, where the arrays are created and sliced. 
     - **`args`**: The `args` section maps operation parameters to the adapter's `body()` method arguments:
       - **`from-param`**: Pass the operation parameter directly to the corresponding `body()` argument
       - **`const`**: Pass the given constant value to the `body()` argument
-      - **`expose-as`**: Allow the user to override the `const` value 
+      - **`expose-as`**: Allow the user to override the `const` value
         - **`param`**: The operation parameter to map to the adapter's `body()` method argument
         - **`type`**: The parameter type
         - **`description`**: Human-readable description of the parameter
@@ -480,9 +480,9 @@ This configuration file is the "contract" between your application code and the 
 
 ## Step 4: Create Adapter Implementations
 
-Now wrap your original functions in the `body()` method of DFM adapter classes. Remember the mapping from Step 4:
+Now wrap your original functions in the `body()` method of DFM adapter classes. Remember the mapping from Step 3:
 - **`parameters`** in the config → define what arguments the `body()` method accepts
-- **`returns`** in the config → dictionary returned by `body()` method  
+- **`returns`** in the config → describes the value returned by the `body()` method
 - **`args`** in the config → maps operation parameters (and other values) to `body()` method arguments using `from-param`, `const`, etc.
 
 Each adapter class must have:
@@ -595,7 +595,7 @@ dfm fed config set myfed \
 **NOTE:** At the moment, you need to supply a `--project-path` even though we do not need it for `local` execution.  Since we are not providing any NVFlare project configuration for our `local` setup, we can just supply `None`.
 
 **Parameters:**
-- `myfed` - The federation name (must match `code_pkg_name` in your config)
+- `myfed` - The name used to register this federation locally
 - `--federation-dir myfed` - The federation root directory (relative to workspace root)
 - `--config-path configs/federation.dfm.yaml` - Path to your federation config file (**relative to the federation directory**, not the workspace)
 - `--project-path None` - Path to the NVFlare project configuration file, which we don't need so we supply `None`.
@@ -624,7 +624,7 @@ This creates:
 You should see output confirming the code generation completed successfully.
 
 **Notes**:
-- The `--output-dir myfed` tells DFM to generate code inside the `myfed/myfed` directory, as this output directory is relative to the `federation_dir` in the `myfed` section of your `federations.yaml` file (created with the `dfm fed config create-default` command above)
+- The `--output-dir myfed` tells DFM to generate code inside the `myfed/myfed` directory, because `--output-dir` is relative to your current working directory; run this command from the workspace root
 - You may see warnings like "Compute cost not set for operation... Using suboptimal default values" - these are informational warnings about optimization settings and can be safely ignored for now. Compute costs are optional metadata used by DFM's optimizer to make scheduling decisions, but they're not required for basic pipeline execution.
 
 ### Install the Generated Code as a Package
@@ -662,7 +662,7 @@ This installs the `myfed` package so local target workers can import `myfed.fed.
 
 ## Step 6: Create a Jupyter Notebook for testing
 
-Next, we want to create a Jupyter Notebook were we can create and submit DFM pipelines using the distributed functions we've just created.
+Next, we want to create a Jupyter Notebook where we can create and submit DFM pipelines using the distributed functions we've just created.
 
 First, install JupyterLab if you haven't already:
 
@@ -707,13 +707,13 @@ print("Connected to local federation!")
 with Pipeline() as p:
     # Tell the loader site to create a 200x300x400 array with values ranging from -500 to 500
     array = Create(site="loader", shape=(200,300,400), min=-500, max=500)
-    
+
     # Tell the loader site to subset that array to get a 2D slice
     array0 = Subset(site="loader", array=array, index=[0])
-    
+
     # Plot at plotter site (array0 will be sent to plotter)
     image = Plot2D(site="plotter", array=array0)
-    
+
     # Return image to notebook
     Yield(value=image)
 ```
@@ -741,9 +741,9 @@ results = []
 
 def collect_result(from_site, from_node, frame, target_place, data):
     from nv_dfm_core.api import StopToken, ErrorToken
-    
+
     print(f"CALLBACK CALLED: from_site={from_site}, target_place={target_place}, data type={type(data)}")
-    
+
     # Only collect actual yielded results, not control tokens
     if not isinstance(data, (StopToken, ErrorToken)):
         results.append(data)
@@ -780,7 +780,9 @@ else:
     print("No results received")
 ```
 
-### Cell 8: Cleanup (optional)
+### Cell 8: Cleanup
+
+Always close the session when you are done. This releases resources and shuts down the local worker processes started for the federation; skipping it can leave orphaned processes running.
 
 ```python
 session.close()
@@ -788,7 +790,7 @@ session.close()
 
 ## Step 7: Run Your Notebook
 
-1. Start Jupyter from the myfed directory:
+1. From the workspace root, start Jupyter in the notebook directory:
 
    ```bash
    cd myfed/apps
@@ -799,7 +801,7 @@ session.close()
 
 3. You should see:
    - Connection confirmation
-   - Pipeline preparation confirmation  
+   - Pipeline preparation confirmation
    - Progress messages during execution
    - The grayscale image displayed in the notebook
 
@@ -827,12 +829,32 @@ session.close()
 
 In your notebook, try changing this basic setup.
 
-### Try extracting a different slice:
+### Why picking a different index looks the same
+
+Your first instinct might be to change `index=[0]` (from Cell 3) to `index=[5]`:
 
 ```python
-# Extract a different slice along axis 0
 array_slice = Subset(site="loader", array=array, index=[5])
 ```
+
+...but the rendered image is **identical**. That surprises people, so it's worth understanding why:
+
+- `Create` builds a **linear** gradient, so two slices taken along the same axis (`array[0]` vs `array[5]`) differ only by a *constant* offset added to every pixel.
+- `Plot2D` normalizes each slice to its own min/max (`(array - array.min()) / (array.max() - array.min())`), which cancels that constant offset.
+
+So any slice taken along the same axis renders to the exact same grayscale image. (`index` is a list of integers indexing the leading axes, so every choice here is a slice along axis 0.)
+
+### Make a change you can actually see
+
+To get a visibly different image, change the *shape* of the gradient so the extracted slice has a different aspect ratio and a steeper gradient. In Cell 3, shrink the last axis:
+
+```python
+# 40 instead of 400 along the last axis
+array = Create(site="loader", shape=(200, 300, 40), min=-500, max=500)
+array0 = Subset(site="loader", array=array, index=[0])
+```
+
+The `[0]` slice is now `300x40` instead of `300x400` — a much narrower image whose gradient rises far more steeply from left to right.
 
 ## Cleanup
 

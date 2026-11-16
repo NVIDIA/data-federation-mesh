@@ -22,6 +22,7 @@ from __future__ import annotations
 from typing import Literal, Union
 
 from nv_dfm_core.api import Advise, NodeParam, Operation, PlaceParam
+from pydantic import ConfigDict
 
 
 class GreetMe(Operation):
@@ -35,9 +36,9 @@ class GreetMe(Operation):
     Returns: string
     """
 
-    class Config:
-        arbitrary_types_allowed = True
-
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
     dfm_class_name: Literal['examplefed.fed.api.users.GreetMe'] = (
         'examplefed.fed.api.users.GreetMe'
     )

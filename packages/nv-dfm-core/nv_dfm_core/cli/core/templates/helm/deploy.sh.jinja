@@ -19,16 +19,22 @@ limitations under the License.
 set -e
 
 # Initialize values arguments
-VALUES_ARGS=""
+RELEASE={{ provision.helm.name | shellquote }}
+VALUES_ARGS=()
 INSTALL=false
 UNINSTALL=false
-HELM_ARGS=""
+HELM_ARGS=()
 
 # Process command line value files
 while [[ $# -gt 0 ]]; do
     case $1 in
         -f|--values)
-            VALUES_ARGS="$VALUES_ARGS --values $(realpath $2)"
+            if [[ $# -lt 2 ]]; then
+                echo "Missing file for $1" >&2
+                exit 1
+            fi
+            VALUE_FILE=$(realpath -- "$2")
+            VALUES_ARGS+=(--values "$VALUE_FILE")
             shift 2
             ;;
         -u|--uninstall)
@@ -42,7 +48,7 @@ while [[ $# -gt 0 ]]; do
         --)
             shift
             # Collect all remaining arguments for helm
-            HELM_ARGS="$@"
+            HELM_ARGS=("$@")
             break
             ;;
         *)
@@ -59,26 +65,28 @@ if [[ "$INSTALL" == false && "$UNINSTALL" == false ]]; then
 fi
 
 {% if provision.helm.namespace %}
-NAMESPACE_ARGS="--namespace {{ provision.helm.namespace }} --create-namespace"
+NAMESPACE_ARGS=(--namespace {{ provision.helm.namespace | shellquote }})
+CREATE_NAMESPACE_ARGS=(--create-namespace)
 {% else %}
 # No namespace specified, use default namespace
-NAMESPACE_ARGS=""
+NAMESPACE_ARGS=()
+CREATE_NAMESPACE_ARGS=()
 {% endif %}
 # Uninstall if requested
 if [[ "$UNINSTALL" == true ]]; then
     echo "Uninstalling existing release..."
-    helm uninstall {{ provision.helm.name }} --ignore-not-found $NAMESPACE_ARGS
+    helm uninstall "$RELEASE" --ignore-not-found "${NAMESPACE_ARGS[@]}"
 fi
 
 # Clean up old secrets
 {% for server_site in server_sites %}
-if kubectl $NAMESPACE_ARGS get secret flare-workspace-{{ server_site }}-init &> /dev/null; then
-    kubectl $NAMESPACE_ARGS delete secret flare-workspace-{{ server_site }}-init
+if kubectl "${NAMESPACE_ARGS[@]}" get secret {{ ('flare-workspace-' ~ server_site ~ '-init') | shellquote }} &> /dev/null; then
+    kubectl "${NAMESPACE_ARGS[@]}" delete secret {{ ('flare-workspace-' ~ server_site ~ '-init') | shellquote }}
 fi
 {% endfor %}
 {% for client_site in client_sites %}
-if kubectl $NAMESPACE_ARGS get secret flare-workspace-{{ client_site }}-init &> /dev/null; then
-    kubectl $NAMESPACE_ARGS delete secret flare-workspace-{{ client_site }}-init
+if kubectl "${NAMESPACE_ARGS[@]}" get secret {{ ('flare-workspace-' ~ client_site ~ '-init') | shellquote }} &> /dev/null; then
+    kubectl "${NAMESPACE_ARGS[@]}" delete secret {{ ('flare-workspace-' ~ client_site ~ '-init') | shellquote }}
 fi
 {% endfor %}
 
@@ -90,11 +98,12 @@ fi
 
 {% for server_site in server_sites %}
 {% if provision.helm.startup_package_source == "workspace" %}
-SERVER_PACKAGE_PATH={{ workspace_path }}/prod_00/{{ server_site }}.tar.gz
+SERVER_PACKAGE_PATH={{ (workspace_path ~ '/prod_00/' ~ server_site ~ '.tar.gz') | shellquote }}
 {% elif provision.helm.startup_package_source == "env" %}
-SERVER_PACKAGE_PATH=$DFM_WORKSPACE_{{ server_sites_upper[loop.index0] }}_INIT_PATH
+PACKAGE_ENV={{ ('DFM_WORKSPACE_' ~ server_sites_upper[loop.index0] ~ '_INIT_PATH') | shellquote }}
+SERVER_PACKAGE_PATH="${!PACKAGE_ENV}"
 {% else %}
-echo "Invalid startup package source: {{ provision.helm.startup_package_source }}"
+printf 'Invalid startup package source: %s\n' {{ provision.helm.startup_package_source | shellquote }}
 exit 1
 {% endif %}
 if [[ ! -f "$SERVER_PACKAGE_PATH" ]]; then
@@ -102,17 +111,18 @@ if [[ ! -f "$SERVER_PACKAGE_PATH" ]]; then
     exit 1
 fi
 # Create new secrets for DFM initialization
-echo "Creating secret for {{ server_site }} from $SERVER_PACKAGE_PATH"
-kubectl $NAMESPACE_ARGS create secret generic flare-workspace-{{ server_site }}-init --from-file=$SERVER_PACKAGE_PATH
+printf 'Creating secret for %s from %s\n' {{ server_site | shellquote }} "$SERVER_PACKAGE_PATH"
+kubectl "${NAMESPACE_ARGS[@]}" create secret generic {{ ('flare-workspace-' ~ server_site ~ '-init') | shellquote }} --from-file="$SERVER_PACKAGE_PATH"
 {% endfor %}
 
 {% for client_site in client_sites %}
 {% if provision.helm.startup_package_source == "workspace" %}
-CLIENT_PACKAGE_PATH={{ workspace_path }}/prod_00/{{ client_site }}.tar.gz
+CLIENT_PACKAGE_PATH={{ (workspace_path ~ '/prod_00/' ~ client_site ~ '.tar.gz') | shellquote }}
 {% elif provision.helm.startup_package_source == "env" %}
-CLIENT_PACKAGE_PATH=$DFM_WORKSPACE_{{ client_sites_upper[loop.index0] }}_INIT_PATH
+PACKAGE_ENV={{ ('DFM_WORKSPACE_' ~ client_sites_upper[loop.index0] ~ '_INIT_PATH') | shellquote }}
+CLIENT_PACKAGE_PATH="${!PACKAGE_ENV}"
 {% else %}
-echo "Invalid startup package source: {{ provision.helm.startup_package_source }}"
+printf 'Invalid startup package source: %s\n' {{ provision.helm.startup_package_source | shellquote }}
 exit 1
 {% endif %}
 if [[ ! -f "$CLIENT_PACKAGE_PATH" ]]; then
@@ -120,15 +130,15 @@ if [[ ! -f "$CLIENT_PACKAGE_PATH" ]]; then
     exit 1
 fi
 # Create new secrets for DFM initialization
-echo "Creating secret for {{ client_site }} from $CLIENT_PACKAGE_PATH"
-kubectl $NAMESPACE_ARGS create secret generic flare-workspace-{{ client_site }}-init --from-file=$CLIENT_PACKAGE_PATH
+printf 'Creating secret for %s from %s\n' {{ client_site | shellquote }} "$CLIENT_PACKAGE_PATH"
+kubectl "${NAMESPACE_ARGS[@]}" create secret generic {{ ('flare-workspace-' ~ client_site ~ '-init') | shellquote }} --from-file="$CLIENT_PACKAGE_PATH"
 {% endfor %}
 
 
 # Deploy the Helm chart
 cd "$(dirname "$0")"
 
-echo "Installing {{ provision.helm.name }} from {{ provision.helm.name }}"
-helm upgrade --install {{ provision.helm.name }} {{ provision.helm.name }} $NAMESPACE_ARGS $VALUES_ARGS $HELM_ARGS
+printf 'Installing %s from %s\n' "$RELEASE" "$RELEASE"
+helm upgrade --install "$RELEASE" "$RELEASE" "${NAMESPACE_ARGS[@]}" "${CREATE_NAMESPACE_ARGS[@]}" "${VALUES_ARGS[@]}" "${HELM_ARGS[@]}"
 
 

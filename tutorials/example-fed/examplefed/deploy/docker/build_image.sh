@@ -16,13 +16,13 @@
 
 set -e
 
-PLATFORM="linux/arm64"
-FILE="tutorials/example-fed/examplefed/deploy/docker/Dockerfile"
-CONTEXT="."
-IMAGE="dfm-examplefed"
-TAG="$IMAGE_TAG"
-DOCKER="podman"
-FORMAT="--format=docker"
+PLATFORM=linux/amd64
+FILE=tutorials/example-fed/examplefed/deploy/docker/Dockerfile
+CONTEXT=.
+IMAGE=examplefed
+TAG=0.0.1
+DOCKER=docker
+FORMAT=()
 
 if [[ ! -f $FILE ]]; then
     echo "Dockerfile not found at $FILE"
@@ -31,4 +31,4 @@ if [[ ! -f $FILE ]]; then
 fi
 
 # Build image
-$DOCKER build -t $IMAGE:$TAG  --platform $PLATFORM $FORMAT -f $FILE $CONTEXT
+"$DOCKER" build -t "$IMAGE:$TAG" --platform "$PLATFORM" "${FORMAT[@]}" -f "$FILE" "$CONTEXT"

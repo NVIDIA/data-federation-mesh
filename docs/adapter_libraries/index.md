@@ -47,7 +47,7 @@ To use an adapter from a library package in your federation:
 
 1. **Install the library** alongside `nv-dfm-core`.
 2. **Reference the adapter** in your site's interface section of `.dfm.yaml`, mapping the operation to the adapter class.
-3. **Run code generation** (`dfm gen`) to produce the operations API.
+3. **Run code generation** (`dfm fed gen code <federation>`) to produce the operations API.
 
 See [Adapters & Operations](../userguide/development/adapters.md) for the full details on how adapters are bound to operations and exposed to pipeline users, and [Federation Configuration](../userguide/development/federation_configuration.md) for `.dfm.yaml` syntax.
 

@@ -262,6 +262,49 @@ async def test_transition_exception_handling(net_runner: NetRunner):
     net_runner.shutdown()
 
 
+def test_panic_emits_error_token_to_status_place(net_runner: NetRunner):
+    """panic() from outside the transition pool (e.g. the token-receive path)
+    must wind the NetRunner down and yield an ErrorToken to the status place,
+    i.e. the same user-visible error path as a failing transition."""
+    from nv_dfm_core.api._yield import STATUS_PLACE_NAME
+
+    net_runner.start()
+
+    err = ValueError("Failed to decode/unpickle value: malformed payload")
+    net_runner.panic(err)
+
+    net_runner.wait_for_done(None)
+
+    assert net_runner.error_occurred()
+    assert isinstance(net_runner.get_panic_error().error, ValueError)
+
+    ctx = net_runner.dfm_context
+    assert isinstance(ctx, MagicMock)
+    ctx.send_to_place_sync.assert_called_once()
+    kwargs = ctx.send_to_place_sync.call_args.kwargs
+    assert kwargs["to_place"] == STATUS_PLACE_NAME
+    assert kwargs["is_yield"] is True
+    assert isinstance(kwargs["data"], ErrorToken)
+
+    net_runner.shutdown()
+
+
+def test_panic_is_idempotent_first_error_wins(net_runner: NetRunner):
+    """Only the first error is recorded; later panics just ensure shutdown."""
+    net_runner.start()
+
+    first = ValueError("first")
+    second = RuntimeError("second")
+    net_runner.panic(first)
+    net_runner.panic(second)
+
+    net_runner.wait_for_done(None)
+
+    assert net_runner.get_panic_error().error is first
+
+    net_runner.shutdown()
+
+
 @pytest.mark.asyncio
 async def test_transition_success(net_runner: NetRunner):
     """Test that successful transitions work correctly."""

@@ -151,24 +151,35 @@ def any_object_to_tagged_json_value(obj: Any) -> tuple[str, JsonValue]:
 def tagged_json_value_to_object(val: tuple[str, JsonValue]) -> Any:
     tag, jv = val
     if tag == "BaseModel":
-        assert isinstance(jv, dict)
+        if not isinstance(jv, dict):
+            raise ValueError(
+                f"BaseModel payload must be a dict, got {type(jv).__name__}"
+            )
+        if "class" not in jv or "data" not in jv:
+            raise ValueError("BaseModel payload missing required 'class'/'data' keys")
         class_path = jv["class"]
-        assert isinstance(class_path, str)
+        if not isinstance(class_path, str):
+            raise ValueError(
+                f"BaseModel 'class' must be a str, got {type(class_path).__name__}"
+            )
         try:
             module_name, class_name = class_path.rsplit(".", 1)
             module = __import__(module_name, fromlist=[class_name])
             cls = getattr(module, class_name)
-        except (AttributeError, ImportError):
+        except (AttributeError, ImportError, ValueError):
             raise ValueError(f"Could not locate class: {class_path}")
-        # Validate the data using the class
-        if not issubclass(cls, BaseModel):
+        # Validate the data using the class.
+        if not (isinstance(cls, type) and issubclass(cls, BaseModel)):
             raise ValueError(f"Located class {class_path} is not a Pydantic model")
         return cls.model_validate(jv["data"])
     elif tag == "json":
         # Already a dict/list/primitive, return as-is
         return jv
     elif tag == "PickledObject":
-        assert isinstance(jv, dict)
+        if not isinstance(jv, dict):
+            raise ValueError(
+                f"PickledObject payload must be a dict, got {type(jv).__name__}"
+            )
         # unpickle from base64
         from ..api._pickled_object import PickledObject
 

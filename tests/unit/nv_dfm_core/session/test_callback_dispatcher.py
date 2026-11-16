@@ -23,6 +23,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from nv_dfm_core.api import ErrorToken
+from nv_dfm_core.api._yield import STATUS_PLACE_NAME
 from nv_dfm_core.exec import Frame, TokenPackage
 from nv_dfm_core.session._callback_dispatcher import (
     AsyncioDispatcher,
@@ -37,6 +39,23 @@ from nv_dfm_core.session._callback_dispatcher import (
     call_callbacks_async,
     callbacks_kind,
 )
+
+
+@pytest.fixture
+def malformed_token() -> TokenPackage:
+    """A yield token whose payload fails to deserialize (unwrap_data -> ValueError),
+    e.g. a corrupted or version-skewed BaseModel payload from a worker."""
+    return TokenPackage(
+        source_site="site1",
+        source_node="node1",
+        source_job="job1",
+        target_site="homesite",
+        target_place="result",
+        target_job="job1",
+        is_yield=True,
+        frame=Frame.start_frame(0),
+        tagged_data=("BaseModel", "not-a-dict"),
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -257,6 +276,126 @@ class TestCallCallbacks:
 
         place.assert_called_once()
         default.assert_not_called()
+
+
+# -----------------------------------------------------------------------------
+# Tests for malformed-token (decode failure) handling on the app side
+# -----------------------------------------------------------------------------
+
+
+class TestMalformedTokenDelivery:
+    """A yield whose payload fails to deserialize must be surfaced to the user as
+    an ErrorToken (never raised into the receive/processing thread, never silently
+    dropped)."""
+
+    def test_sync_decode_error_goes_to_default_callback(
+        self, malformed_token: TokenPackage
+    ) -> None:
+        default = MagicMock()
+
+        # Must not raise.
+        call_callbacks(
+            default_callback=default, place_callbacks=None, tokens=malformed_token
+        )
+
+        default.assert_called_once()
+        args = default.call_args[0]
+        assert args[0] == "site1"  # source_site
+        assert args[3] == "result"  # target_place
+        assert isinstance(args[4], ErrorToken)  # data is an ErrorToken
+
+    def test_sync_decode_error_prefers_status_callback(
+        self, malformed_token: TokenPackage
+    ) -> None:
+        default = MagicMock()
+        status = MagicMock()
+        result_cb = MagicMock()
+
+        call_callbacks(
+            default_callback=default,
+            place_callbacks={STATUS_PLACE_NAME: status, "result": result_cb},
+            tokens=malformed_token,
+        )
+
+        status.assert_called_once()
+        assert isinstance(status.call_args[0][4], ErrorToken)
+        default.assert_not_called()
+        # The normal place callback must NOT receive the undecodable payload.
+        result_cb.assert_not_called()
+
+    def test_sync_decode_error_without_callbacks_does_not_raise(
+        self, malformed_token: TokenPackage
+    ) -> None:
+        # No status/default callback: logged, but must not raise.
+        call_callbacks(
+            default_callback=None, place_callbacks=None, tokens=malformed_token
+        )
+
+    def test_sync_error_callback_that_raises_does_not_propagate(
+        self, malformed_token: TokenPackage
+    ) -> None:
+        def boom(*_args: Any) -> None:
+            raise RuntimeError("user callback blew up")
+
+        # A throwing user callback must not tear down the thread.
+        call_callbacks(
+            default_callback=boom, place_callbacks=None, tokens=malformed_token
+        )
+
+    def test_sync_good_token_still_delivers_data(
+        self, malformed_token: TokenPackage, sample_token: TokenPackage
+    ) -> None:
+        default = MagicMock()
+
+        call_callbacks(
+            default_callback=default,
+            place_callbacks=None,
+            tokens=[malformed_token, sample_token],
+        )
+
+        assert default.call_count == 2
+        # First call: the decode error; second call: the real payload.
+        assert isinstance(default.call_args_list[0][0][4], ErrorToken)
+        assert default.call_args_list[1][0][4] == {"value": 42}
+
+    @pytest.mark.asyncio
+    async def test_async_decode_error_goes_to_default_callback(
+        self, malformed_token: TokenPackage
+    ) -> None:
+        received: list[Any] = []
+
+        async def default(*args: Any) -> None:
+            received.append(args[4])
+
+        await call_callbacks_async(
+            default_callback=default, place_callbacks=None, tokens=malformed_token
+        )
+
+        assert len(received) == 1
+        assert isinstance(received[0], ErrorToken)
+
+    @pytest.mark.asyncio
+    async def test_async_decode_error_prefers_status_callback(
+        self, malformed_token: TokenPackage
+    ) -> None:
+        status_received: list[Any] = []
+        default_received: list[Any] = []
+
+        async def status(*args: Any) -> None:
+            status_received.append(args[4])
+
+        async def default(*args: Any) -> None:
+            default_received.append(args[4])
+
+        await call_callbacks_async(
+            default_callback=default,
+            place_callbacks={STATUS_PLACE_NAME: status},
+            tokens=malformed_token,
+        )
+
+        assert len(status_received) == 1
+        assert isinstance(status_received[0], ErrorToken)
+        assert default_received == []
 
 
 # -----------------------------------------------------------------------------

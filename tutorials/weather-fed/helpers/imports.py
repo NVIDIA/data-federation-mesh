@@ -28,6 +28,15 @@ from weather_fed.fed.api.xarray import ConvertToUint8, RenderUint8ToImages, Vari
 
 from weather_fed.fed.api.dataloader import LoadEcmwfEra5Data, LoadGfsEra5Data
 
+# import the SFNO forecasting operation (AI model adapter). Guarded so that the
+# other weather-fed notebooks -- which import from this module but do not use SFNO --
+# keep working even if the generated SFNO API is unavailable (e.g. the federation
+# was generated without the sfno operation).
+try:
+    from weather_fed.fed.api.sfno import SfnoPrognostic
+except (ImportError, ModuleNotFoundError):
+    SfnoPrognostic = None  # type: ignore[assignment,misc]
+
 
 __all__ = [
     "Advise",
@@ -40,6 +49,7 @@ __all__ = [
     "PlaceParam",
     "RenderUint8ToImages",
     "Session",
+    "SfnoPrognostic",
     "SingleFieldAdvice",
     "StopToken",
     "TextureFile",

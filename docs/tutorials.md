@@ -27,23 +27,27 @@ Recommended reading order:
 
 ## Running Tutorials Locally
 
-Clone the repository and install DFM with the tutorial dependencies:
+Use Python 3.12, then clone the repository and install DFM with the tutorial dependencies:
 
 ```bash
 git clone https://github.com/NVIDIA/data-federation-mesh.git
 cd data-federation-mesh
 uv sync --all-packages --extra tutorials
+source .venv/bin/activate
 ```
 
 ```{tip}
 See the [README](https://github.com/NVIDIA/data-federation-mesh/blob/main/README.md#development-setup) for detailed setup instructions, including how to install `uv`.
 ```
 
-The Zero to Thirty tutorials are step-by-step written guides — all commands can be run directly in your terminal. The Weather Federation tutorials are Jupyter notebooks — launch JupyterLab and open them in order:
+The Zero to Thirty tutorials are step-by-step written guides — all commands can be run directly in your terminal. The Weather Federation tutorials are Jupyter notebooks — open them in your preferred Jupyter frontend (JupyterLab, Jupyter Notebook, or the VS Code / Cursor notebook editor). DFM does not bundle a notebook UI; if you want to launch one from the project environment, install it first, e.g.:
 
 ```bash
-uv run jupyter lab
+uv pip install jupyterlab
+uv run --no-sync jupyter lab
 ```
+
+Select this checkout's `.venv` as the notebook kernel. After another `uv sync`, reinstall JupyterLab if it was removed and restart the kernel before continuing.
 
 ### Zero to Thirty
 
@@ -72,4 +76,5 @@ These tutorials are designed to be run interactively as Jupyter notebooks. The p
 
 Part 1 – Basic Pipeline <tutorials-weather-fed/01-basic-pipeline>
 Part 2 – Loaders and Transforms <tutorials-weather-fed/02-weather-loaders-and-transforms>
+Part 3 – SFNO Forecast <tutorials-weather-fed/03-sfno-forecast>
 ```

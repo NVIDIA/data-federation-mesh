@@ -22,7 +22,9 @@ Adapters are concrete implementations of DFM functionality. They are classes ini
 ## Adapter Structure
 
 ```python
-from dfm.exec import Site, Provider
+from typing import Any
+
+from nv_dfm_core.exec import Site, Provider
 
 class MyNewAdapter:
     def __init__(self, site: Site, provider: Provider | None):
@@ -72,12 +74,12 @@ sites:
   my_site:
     interface:
       "#/operations/operation_package.UsersExposedOperation":
-      adapter: adapters_dir.lib.my_adapter.MyAdapter
-      args:
-        param_1:
-          from-param: param_1
-        local_param:
-          const: "Some site-specific param"
+        adapter: adapters_dir.lib.my_adapter.MyAdapter
+        args:
+          param_1:
+            from-param: param_1
+          local_param:
+            const: "Some site-specific param"
 ```
 
 **Parameter overloading:** When mapping operations to adapters, the operation interface can be overloaded. In the example above, the public operation exposes only `param_1`, but the adapter's `body()` requires two arguments. The extra parameter (`local_param`) is supplied using a constant. This gives site administrators flexibility in how operations are managed.

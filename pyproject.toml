@@ -27,7 +27,6 @@ dependencies = [
 [project.optional-dependencies]
 tutorials = [
     "nv-dfm-lib-weather",
-    "jupyterlab",
     "ipywidgets",
     "leafmap",
 ]
@@ -35,10 +34,44 @@ tutorials = [
 [tool.uv]
 managed = true
 index-strategy = "unsafe-best-match"
+# Build earth2grid against the project's *installed* (cu129-pinned) torch instead
+# of a fresh one from an isolated PEP 517 build 
+no-build-isolation-package = ["earth2grid", "torch-harmonics"]
+# Pin torch-harmonics to the latest sdist line (0.8.x) and build it from source
+# (see no-build-isolation above). 
+override-dependencies = ["torch-harmonics>=0.8.0,<0.9.0"]
+
+constraint-dependencies = [
+    "warp-lang<1.15",
+    "grpcio>=1.83.0rc1",
+    "cryptography>=46.0.7,<47",
+    "aiohttp>=3.14.4,<4",
+    "pygments>=2.20.0",
+    "gdown>=5.2.2,<6",
+    # onnx (via physicsnemo): CVE fix. 1.22.0 GA is now available, so we floor
+    # at the stable release (no pre-release opt-in needed).
+    "onnx>=1.22.0",
+    # pyarrow (via xarray -> dask): no short-term fix; 25.0.0 is the only
+    # patched line (major jump from 20.0.0).
+    "pyarrow>=25.0.0",
+    # pyasn1 (via gcsfs -> google-auth -> pyasn1-modules): CVE fixes in the 0.6.5
+    # patch. Floor it here rather than touching the gcsfs chain that pulls it in.
+    "pyasn1>=0.6.5",
+    # torch (via physicsnemo/earth2studio): critical CVE, fix in 2.13.0. Not on
+    # cu128 (caps at 2.11.0), so we source the CUDA-12.9 build from cu129 below.
+    "torch>=2.13.0",
+    "torchvision>=0.28.0",
+    "oauthlib>=4.0.0",
+    "msgpack>=1.2.3",
+    "hydra-core>=1.3.7",
+    "urllib3>=2.8.0",
+    "pyjwt>=2.14.0",
+    "anyio>=4.14.2",
+]
 
 [[tool.uv.index]]
-name = "pytorch-cu128"
-url = "https://download.pytorch.org/whl/cu128"
+name = "pytorch-cu129"
+url = "https://download.pytorch.org/whl/cu129"
 explicit = true
 
 [tool.uv.workspace]
@@ -48,19 +81,30 @@ members = ["packages/*",
 
 [tool.uv.sources]
 nv-dfm-core = { workspace = true }
-torch = { index = "pytorch-cu128" }
-torchvision = { index = "pytorch-cu128" }
-torchaudio = { index = "pytorch-cu128" }
+# torch stack: on Linux, source the CUDA-12.9 build from cu129 (has torch 2.13.0;
+# cu128 caps at 2.11.0). On macOS dev, fall back to PyPI (CPU/MPS). The marker is
+# essential: without it the universal lock can't satisfy macOS from cu129 and
+# silently falls back to PyPI (cu13x) for every platform.
+torch = [{ index = "pytorch-cu129", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cu129", marker = "sys_platform == 'linux'" }]
+torchaudio = [{ index = "pytorch-cu129", marker = "sys_platform == 'linux'" }]
 nv-dfm-lib-common = { workspace = true }
 nv-dfm-lib-weather = { workspace = true }
 examplefed = { workspace = true }
-earth2studio = { git = "https://github.com/NVIDIA/earth2studio.git", rev = "f7fb900970a20b875c8aef2066f57c25bdda58c5" }
-cbottle = { git = "https://github.com/NickGeneva/cBottle.git", rev = "2efe844e772b5075f06f358eeeab587423628b61" }
-earth2grid = { git = "https://github.com/NVlabs/earth2grid.git", rev = "661445e2c68edc76f52632aa0528af482357f1b8" }
-makani = { git = "https://github.com/NVIDIA/makani.git", rev = "28f38e3e929ed1303476518552c64673bbd6f722" }
+earth2studio = { git = "https://github.com/NVIDIA/earth2studio.git", tag = "0.16.0" }
+
+[[tool.uv.dependency-metadata]]
+name = "earth2grid"
+version = "2025.11.1+torch213"
+requires-dist = ["einops", "numpy", "scipy", "torch"]
+
+[[tool.uv.dependency-metadata]]
+name = "torch-harmonics"
+requires-dist = ["numpy", "torch"]
 
 [tool.uv.extra-build-dependencies]
 earth2grid = ["setuptools"]
+torch-harmonics = ["setuptools", "torch", "ninja"]
 
 [dependency-groups]
 dev = [
@@ -76,6 +120,7 @@ dev = [
     "iniconfig>=2.0.0,<2.1.0",
     "coverage>=7.9.2,<7.10.0",
     "python-gitlab>=4.0.0",
+    "tomli>=2.0.0; python_version < '3.11'",
 ]
 
 docs = [

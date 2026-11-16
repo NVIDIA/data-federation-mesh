@@ -98,8 +98,10 @@ class LoadEcmwfEra5Data:
         # If we ever want to test with other data sources, this should be a parameter
         self._url = "gs://gcp-public-data-arco-era5/ar/1959-2022-full_37-1h-0p25deg-chunk-1.zarr-v2"
         self._engine = "zarr"
-        # Empty for now, but we can add more parameters here if needed
-        self._engine_kwargs: dict[str, Any] = {}
+        # The ARCO ERA5 bucket is public. Without an explicit anonymous token gcsfs
+        # runs Google credential discovery, which makes opening the store several
+        # times slower outside GCP (~80s vs ~8s with gcsfs 2026.x).
+        self._engine_kwargs: dict[str, Any] = {"storage_options": {"token": "anon"}}
 
     @field_advisor("variables")
     async def available_variables(self, _value, _context):
@@ -211,10 +213,27 @@ class LoadEcmwfEra5Data:
         self._logger.info(f"Opened ECMWF ERA5 dataset: {ds}")
         print(f"Opened ECMWF ERA5 dataset: {ds}")
         if selection:
-            selection_dict: dict[Any, Any] = {
-                k: (v if isinstance(v, list) else [v]) for k, v in selection.items()
-            }
-            ds = ds.sel(method="nearest", **selection_dict)
+            # Only apply selection keys that name a real dimension or coordinate of
+            # the dataset. Unknown keys are ignored (with a warning) rather than
+            # forwarded to ds.sel(), which would raise
+            # "'<key>' is not a valid dimension or coordinate". This keeps the loader
+            # robust to extra selection entries -- discovery advises `selection` with
+            # allow_extras=True, so callers may legitimately pass keys we don't use.
+            valid_keys = set(ds.dims) | set(ds.coords)
+            self._logger.debug(
+                f"Valid ECMWF ERA5 selection keys (dims/coords): {sorted(valid_keys)}"
+            )
+            selection_dict: dict[Any, Any] = {}
+            for k, v in selection.items():
+                if k not in valid_keys:
+                    self._logger.warning(
+                        f"Ignoring selection key '{k}': not a dimension or coordinate "
+                        "of the ECMWF ERA5 dataset"
+                    )
+                    continue
+                selection_dict[k] = v if isinstance(v, list) else [v]
+            if selection_dict:
+                ds = ds.sel(method="nearest", **selection_dict)
 
         # pick the selected variables (or all, if no explicit list or '*')
         # This works better than "drop_variables", because it keeps the

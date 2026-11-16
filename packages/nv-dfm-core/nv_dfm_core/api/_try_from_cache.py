@@ -31,15 +31,16 @@ class TryFromCache(Statement, Block):
     """Takes a key and tries to get the value from the cache.
     If the value is not in the cache, the body is executed.
 
-    Usage:
-    data = ...
-    key = KeyFromExpr(expr=RenderImage(data=data))
-    with TryFromCache(key=key) as img:
-        # body
-        content = RenderImage(data=dat)
-        img.cache(content)
+    Usage::
 
-    Yield(value=img)
+        data = ...
+        key = KeyFromExpr(expr=RenderImage(data=data))
+        with TryFromCache(key=key) as img:
+            # body
+            content = RenderImage(data=dat)
+            img.cache(content)
+
+        Yield(value=img)
     """
 
     model_config: ConfigDict = ConfigDict(extra="forbid", frozen=True)

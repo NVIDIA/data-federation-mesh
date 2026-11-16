@@ -33,7 +33,6 @@ Here we add **NVIDIA Flare POC (Proof of Concept) mode** so you can run the same
 - [Step 7: Run the Notebook](#step-7-run-the-notebook)
 - [Cleanup](#cleanup)
 - [Troubleshooting (POC-specific)](#troubleshooting-poc-specific)
-- [Next Steps](#next-steps)
 
 ## What You will Do
 
@@ -75,7 +74,7 @@ Then **regenerate code** (you will do this again after adding project.yaml in St
 dfm fed gen code myfed --output-dir myfed
 ```
 
-This creates `myfed/fed/runtime/server/` so the controller can load `myfed.fed.runtime.server`.
+This creates `myfed/myfed/fed/runtime/server/` so the controller can load `myfed.fed.runtime.server`.
 
 ---
 
@@ -232,18 +231,18 @@ session.connect()
 print("Connected to federation!")
 ```
 
-Keep all other cells as in Part 1 (same pipeline, prepare, execute, callback, wait, display, close). Run the notebook from the workspace (or ensure the path to `admin_startup_kit` is correct for your directory layout).
+Keep all other cells as in Part 1 (same pipeline, prepare, execute, callback, wait, display, close). Run the notebook with `myfed/apps/` as its working directory, or adjust `admin_startup_kit` for your directory layout.
 
 ---
 
 ## Step 7: Run the Notebook
 
-1. Start Jupyter from the workspace root:
+1. From the workspace root, start Jupyter in the notebook directory:
    ```bash
-   cd ~/zero-to-thirty
+   cd ~/zero-to-thirty/myfed/apps
    jupyter lab
    ```
-2. Open `myfed/apps/application.ipynb` (or your notebook).
+2. Open `application.ipynb` (or your notebook).
 3. Run all cells in order.
 
 You should see the same behavior as in Part 1, but with jobs running over Flare POC instead of the local target.

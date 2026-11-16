@@ -168,7 +168,7 @@ operations:
 
 Each parameter can be configured with the following options:
 - `description`: A description of the parameter
-- `type`: Can be either a JSON Schema type ("string", "number", "integer", "boolean", "array", "object", "null") or the fully qualified class name of a custom Pydantic model (must contain at least one `.`) for accepting any Python Pydantic model. If non-pydantic Python objects need to be passed, they need to be wrapped inside a `dfm.api.PickledObject`, which is a Pydantic model (that is, you'd declare `type: dfm.api.PickledObject` and wrap your non-pydantic object at runtime)
+- `type`: Can be either a JSON Schema type ("string", "number", "integer", "boolean", "array", "object", "null") or the fully qualified class name of a custom Pydantic model (must contain at least one `.`) for accepting any Python Pydantic model. If non-pydantic Python objects need to be passed, they need to be wrapped inside a `nv_dfm_core.api.PickledObject`, which is a Pydantic model (that is, you'd declare `type: nv_dfm_core.api.PickledObject` and wrap your non-pydantic object at runtime)
 - `$ref`: If `$ref` references a schema defined in the schemas section, this exact schema will be used. If the reference does not point to a model in the schemas section, the JSON object to which `$ref` points to will be inlined in-place (possibly duplicating the type)
 - `accepts-literal-input`: Whether the parameter accepts direct values (default: true)
 - `accepts-node-input`: Whether the parameter accepts node references (default: true)
@@ -289,16 +289,24 @@ Adapter arguments (except those using `from-param`) can be exposed in the site's
 args:
   api_key:
     from-secrets: "api_key"
-    expose-as: "api_key"  # Makes this parameter available in the site's public API
+    expose-as:
+      param: api_key
+      type: string
   greeting:
     const: "Hello"
-    expose-as: "greeting"  # Makes this parameter available in the site's public API
+    expose-as:
+      param: greeting
+      type: string
   base_url:
     from-provider: "api.base_url"
-    expose-as: "base_url"  # Makes this parameter available in the site's public API
+    expose-as:
+      param: base_url
+      type: string
   site_id:
     from-site: "site_id"
-    expose-as: "site_id"  # Makes this parameter available in the site's public API
+    expose-as:
+      param: site_id
+      type: string
 ```
 
 In this example, all adapter arguments (except `from-param`) are exposed. Site users can provide values for these parameters while sensitive data (like API keys) remains secure.

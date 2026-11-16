@@ -86,6 +86,20 @@ dfm fed gen docker my_federation --patch /path/to/custom-patch.yaml
   - `build.arch`: Target architecture (`amd64` or `arm64`)
   - `build.context`: Build context directory
 
+Generated scripts treat configuration values as literal strings; shell expressions
+such as `$VARIABLE` or `$(command)` in YAML are not expanded. Regenerate existing
+scripts with `--force` to pick up the shell-quoting and credential-handling fixes.
+
+For registry pushes, use an existing `docker login` / `podman login`, or set
+`DFM_DOCKER_REGISTRY_PASSWORD` when running `build_image.sh`. The username comes
+from `build.push.registry.username` and can be overridden at runtime with
+`DFM_DOCKER_REGISTRY_USERNAME`. Passwords are passed to the engine through standard
+input and are never embedded in generated scripts. Remove any existing
+`build.push.registry.password` value from YAML; while that legacy value remains
+configured, the generated script requires `DFM_DOCKER_REGISTRY_PASSWORD` and fails
+before building if it is unset. Delete or regenerate older scripts that contain
+credentials.
+
 :::{warning}
 Generated files are intended as starting placeholders and are not production-ready. Review and adapt them for your environment before deploying.
 :::
@@ -137,7 +151,7 @@ The `--clean` flag removes any previously generated provisioning artifacts befor
 The jobs can be submitted to the federation when it is fully configured and running.
 
 There are two execution targets for a pipeline:
-- `local` - runs within the context of user's application process (does not need a running federation),
+- `local` - runs on the same machine using worker processes (does not need a deployed federation),
 - `flare` - runs within federation deployment based on NVIDIA Flare.
 
 There are two main ways to submit a job using DFM CLI:
@@ -146,13 +160,13 @@ There are two main ways to submit a job using DFM CLI:
 
 Submitting a pipeline is a simplification for submitting a full job script. In this case, DFM CLI takes care of creating a DFM session, running the pipeline, and collecting the results. User is only required to provide a path to a Python script that must contain `get_pipeline` function that returns DFM `Pipeline` object, and `get_pipeline_parameters` that returns a dictionary with pipeline parameters.
 
-A simple pipeline that runs within the DFM example federation [`examplefed`](../../tutorials/example-fed):
+A simple pipeline that runs within the DFM example federation [`examplefed`](https://github.com/NVIDIA/data-federation-mesh/tree/main/tutorials/example-fed):
 
 ```python
 import argparse
 
 from examplefed.apps.concierge import GreetMe, Yield
-from dfm.api import Pipeline
+from nv_dfm_core.api import Pipeline
 
 def get_pipeline(args: list[str] | None = None):
     with Pipeline() as pipeline:

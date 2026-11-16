@@ -17,16 +17,22 @@
 set -e
 
 # Initialize values arguments
-VALUES_ARGS=""
+RELEASE=examplefed
+VALUES_ARGS=()
 INSTALL=false
 UNINSTALL=false
-HELM_ARGS=""
+HELM_ARGS=()
 
 # Process command line value files
 while [[ $# -gt 0 ]]; do
     case $1 in
         -f|--values)
-            VALUES_ARGS="$VALUES_ARGS --values $(realpath $2)"
+            if [[ $# -lt 2 ]]; then
+                echo "Missing file for $1" >&2
+                exit 1
+            fi
+            VALUE_FILE=$(realpath -- "$2")
+            VALUES_ARGS+=(--values "$VALUE_FILE")
             shift 2
             ;;
         -u|--uninstall)
@@ -40,7 +46,7 @@ while [[ $# -gt 0 ]]; do
         --)
             shift
             # Collect all remaining arguments for helm
-            HELM_ARGS="$@"
+            HELM_ARGS=("$@")
             break
             ;;
         *)
@@ -58,23 +64,24 @@ fi
 
 
 # No namespace specified, use default namespace
-NAMESPACE_ARGS=""
+NAMESPACE_ARGS=()
+CREATE_NAMESPACE_ARGS=()
 
 # Uninstall if requested
 if [[ "$UNINSTALL" == true ]]; then
     echo "Uninstalling existing release..."
-    helm uninstall examplefed --ignore-not-found $NAMESPACE_ARGS
+    helm uninstall "$RELEASE" --ignore-not-found "${NAMESPACE_ARGS[@]}"
 fi
 
 # Clean up old secrets
 
-if kubectl $NAMESPACE_ARGS get secret flare-workspace-server-init &> /dev/null; then
-    kubectl $NAMESPACE_ARGS delete secret flare-workspace-server-init
+if kubectl "${NAMESPACE_ARGS[@]}" get secret flare-workspace-server-init &> /dev/null; then
+    kubectl "${NAMESPACE_ARGS[@]}" delete secret flare-workspace-server-init
 fi
 
 
-if kubectl $NAMESPACE_ARGS get secret flare-workspace-reception-init &> /dev/null; then
-    kubectl $NAMESPACE_ARGS delete secret flare-workspace-reception-init
+if kubectl "${NAMESPACE_ARGS[@]}" get secret flare-workspace-reception-init &> /dev/null; then
+    kubectl "${NAMESPACE_ARGS[@]}" delete secret flare-workspace-reception-init
 fi
 
 
@@ -86,34 +93,36 @@ fi
 
 
 
-SERVER_PACKAGE_PATH=$DFM_WORKSPACE_SERVER_INIT_PATH
+PACKAGE_ENV=DFM_WORKSPACE_SERVER_INIT_PATH
+SERVER_PACKAGE_PATH="${!PACKAGE_ENV}"
 
 if [[ ! -f "$SERVER_PACKAGE_PATH" ]]; then
     echo "Server startup package not found: $SERVER_PACKAGE_PATH"
     exit 1
 fi
 # Create new secrets for DFM initialization
-echo "Creating secret for server from $SERVER_PACKAGE_PATH"
-kubectl $NAMESPACE_ARGS create secret generic flare-workspace-server-init --from-file=$SERVER_PACKAGE_PATH
+printf 'Creating secret for %s from %s\n' server "$SERVER_PACKAGE_PATH"
+kubectl "${NAMESPACE_ARGS[@]}" create secret generic flare-workspace-server-init --from-file="$SERVER_PACKAGE_PATH"
 
 
 
 
-CLIENT_PACKAGE_PATH=$DFM_WORKSPACE_RECEPTION_INIT_PATH
+PACKAGE_ENV=DFM_WORKSPACE_RECEPTION_INIT_PATH
+CLIENT_PACKAGE_PATH="${!PACKAGE_ENV}"
 
 if [[ ! -f "$CLIENT_PACKAGE_PATH" ]]; then
     echo "Client startup package not found: $CLIENT_PACKAGE_PATH"
     exit 1
 fi
 # Create new secrets for DFM initialization
-echo "Creating secret for reception from $CLIENT_PACKAGE_PATH"
-kubectl $NAMESPACE_ARGS create secret generic flare-workspace-reception-init --from-file=$CLIENT_PACKAGE_PATH
+printf 'Creating secret for %s from %s\n' reception "$CLIENT_PACKAGE_PATH"
+kubectl "${NAMESPACE_ARGS[@]}" create secret generic flare-workspace-reception-init --from-file="$CLIENT_PACKAGE_PATH"
 
 
 
 # Deploy the Helm chart
 cd "$(dirname "$0")"
 
-echo "Installing examplefed from examplefed"
-helm upgrade --install examplefed examplefed $NAMESPACE_ARGS $VALUES_ARGS $HELM_ARGS
+printf 'Installing %s from %s\n' "$RELEASE" "$RELEASE"
+helm upgrade --install "$RELEASE" "$RELEASE" "${NAMESPACE_ARGS[@]}" "${CREATE_NAMESPACE_ARGS[@]}" "${VALUES_ARGS[@]}" "${HELM_ARGS[@]}"
 

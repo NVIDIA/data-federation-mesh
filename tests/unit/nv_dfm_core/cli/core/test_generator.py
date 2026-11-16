@@ -523,7 +523,7 @@ def test_dockerfile_generation(tmp_path, federation_config):
         patch("nv_dfm_core.cli.core._generator.os.getcwd", return_value=str(tmp_path)),
     ):
         # Mock env
-        mock_env.return_value = Mock()
+        mock_env.return_value = Mock(filters={})
         mock_env.return_value.get_template.side_effect = lambda name: Mock(
             render=Mock(return_value=f"rendered {name}")
         )
@@ -1124,7 +1124,7 @@ def test_helm_chart_generation(tmp_path, federation_config):
         patch("nv_dfm_core.cli.core._generator.click.echo") as mock_echo,
     ):
         # Mock env
-        mock_env.return_value = Mock()
+        mock_env.return_value = Mock(filters={})
         mock_env.return_value.get_template.side_effect = lambda name: Mock(
             render=Mock(return_value=f"rendered {name}")
         )
@@ -1162,7 +1162,7 @@ def test_dockerfile_permissions(tmp_path, federation_config):
         patch("nv_dfm_core.cli.core._generator.os.getcwd", return_value=str(tmp_path)),
     ):
         # Mock env
-        mock_env.return_value = Mock()
+        mock_env.return_value = Mock(filters={})
         mock_env.return_value.get_template.side_effect = lambda name: Mock(
             render=Mock(return_value="#!/bin/bash\necho Hello\n")
         )
@@ -1253,7 +1253,7 @@ def test_helm_chart_deployment_script(tmp_path, federation_config):
         patch("nv_dfm_core.cli.core._generator.click.echo"),
     ):
         # Mock env
-        mock_env.return_value = Mock()
+        mock_env.return_value = Mock(filters={})
         mock_env.return_value.get_template.side_effect = lambda name: Mock(
             render=Mock(return_value="#!/bin/bash\necho Deploying\n")
         )
@@ -1400,7 +1400,7 @@ def test_dockerfile_iterates_all_templates(tmp_path, federation_config):
         patch("nv_dfm_core.cli.core._generator.click.echo"),
         patch("nv_dfm_core.cli.core._generator.os.getcwd", return_value=str(tmp_path)),
     ):
-        mock_env.return_value = Mock()
+        mock_env.return_value = Mock(filters={})
         mock_env.return_value.get_template.side_effect = lambda name: Mock(
             render=Mock(return_value=f"rendered {name}")
         )
@@ -1427,7 +1427,7 @@ def test_dockerfile_skip_dockerfile(tmp_path, federation_config):
         patch("nv_dfm_core.cli.core._generator.click.echo"),
         patch("nv_dfm_core.cli.core._generator.os.getcwd", return_value=str(tmp_path)),
     ):
-        mock_env.return_value = Mock()
+        mock_env.return_value = Mock(filters={})
         mock_env.return_value.get_template.side_effect = lambda name: Mock(
             render=Mock(return_value=f"rendered {name}")
         )
@@ -1456,7 +1456,7 @@ def test_dockerfile_skip_scripts(tmp_path, federation_config):
         patch("nv_dfm_core.cli.core._generator.click.echo"),
         patch("nv_dfm_core.cli.core._generator.os.getcwd", return_value=str(tmp_path)),
     ):
-        mock_env.return_value = Mock()
+        mock_env.return_value = Mock(filters={})
         mock_env.return_value.get_template.side_effect = lambda name: Mock(
             render=Mock(return_value=f"rendered {name}")
         )

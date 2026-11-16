@@ -22,6 +22,7 @@ from __future__ import annotations
 from typing import Any, Dict, Literal, Union
 
 from nv_dfm_core.api import Advise, NodeParam, Operation, PlaceParam
+from pydantic import ConfigDict
 from testpkg.fed.schema.tasks import InputState
 from testpkg.lib.custom_types import CustomModel
 
@@ -40,9 +41,9 @@ class ProcessData(Operation):
     Returns: object
     """
 
-    class Config:
-        arbitrary_types_allowed = True
-
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
     dfm_class_name: Literal['testpkg.fed.api.tasks.ProcessData'] = (
         'testpkg.fed.api.tasks.ProcessData'
     )
@@ -71,9 +72,9 @@ class RunComputation(Operation):
     Returns: object
     """
 
-    class Config:
-        arbitrary_types_allowed = True
-
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
     dfm_class_name: Literal['testpkg.fed.api.tasks.RunComputation'] = (
         'testpkg.fed.api.tasks.RunComputation'
     )
@@ -106,9 +107,9 @@ class RunController(Operation):
     Returns: object
     """
 
-    class Config:
-        arbitrary_types_allowed = True
-
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
     dfm_class_name: Literal['testpkg.fed.api.tasks.RunController'] = (
         'testpkg.fed.api.tasks.RunController'
     )
@@ -140,9 +141,9 @@ class GenerateReport(Operation):
     Returns: object
     """
 
-    class Config:
-        arbitrary_types_allowed = True
-
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
     dfm_class_name: Literal['testpkg.fed.api.tasks.GenerateReport'] = (
         'testpkg.fed.api.tasks.GenerateReport'
     )

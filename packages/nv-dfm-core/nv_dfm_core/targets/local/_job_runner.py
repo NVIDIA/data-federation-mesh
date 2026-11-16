@@ -133,10 +133,16 @@ class JobRunner(_spawn_ctx.Process):
                     continue
                 router.route_token_package_sync(token_package)
             except Exception as e:
+                # A single token must not tear down the whole site's routing loop.
+                # route_token_package_sync already funnels per-token receive/
+                # deserialize failures into the NetRunner error path; this is a
+                # last-resort guard, so log and keep servicing the queue
+                # (`continue`) rather than `break` (which would drop every
+                # subsequent token for this site and hang the job).
                 self._logger.error(
                     f"Background monitor thread error in JobRunner for site {self._site}: {e}"
                 )
-                break
+                continue
 
     @override
     def run(self):
@@ -178,13 +184,17 @@ class JobRunner(_spawn_ctx.Process):
                 self.ack_command_queue.put(new_job.job_id)
                 controller.wait_for_done(abort_signal=self.abort_netrunner_event)
                 controller.shutdown()
-                if controller.error_occurred():
+                job_errored = controller.error_occurred()
+                if job_errored:
                     self._logger.error(
                         f"JobController error occurred during NetRunner execution for job {new_job.job_id}: {controller.get_panic_error()}"
                     )
-                    break
                 # Always emit a completion marker to the yield queue so the federation can
-                # mark job completion even for pipelines with no user yields.
+                # mark job completion even for pipelines with no user yields -- AND even when
+                # the job errored. A panic (e.g. a malformed inbound token routed via
+                # NetRunner.panic) has already yielded an ErrorToken to the homesite status
+                # place; without also emitting this marker the homesite would wait forever for
+                # completion and the job would hang. Emit the marker, then stop this worker.
                 completion_token = TokenPackage.wrap_data(
                     source_site=self._site,
                     source_node=None,
@@ -197,6 +207,8 @@ class JobRunner(_spawn_ctx.Process):
                     data=None,
                 )
                 self._yield_queue.put(completion_token)
+                if job_errored:
+                    break
 
             except (KeyboardInterrupt, SystemExit):
                 # In local mode, Ctrl+C is commonly used to stop a run. When the signal reaches

@@ -48,7 +48,7 @@ For detailed installation options — including installing individual packages, 
 
 ### Run the Example (Local Target)
 
-From `tutorials/example-fed`:
+From the repository root:
 ```bash
 # Activate the virtual environment
 source .venv/bin/activate

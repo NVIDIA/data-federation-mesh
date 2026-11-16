@@ -42,7 +42,24 @@ Built on top of [NVIDIA Flare](http://developer.nvidia.com/flare), the DFM is de
 - Cloud providers
 - On-premises data centers
 
-These all work together as a unified system. DFM functions as a distributed virtual machine, composed of heterogeneous cloud services operating on top of external services and applications that do "heavy lifting". Each site administrator retains strict control over DFM capabilities offered by their own site, ensuring that data processing occurs within defined security boundaries and that the site's intellectual property and security are preserved.
+These all work together as a unified system. DFM functions as a distributed virtual machine, composed of heterogeneous cloud services operating on top of external services and applications that do "heavy lifting". Site administrators configure the capabilities offered by their sites and control federation membership. The trust model below defines the limits of those controls.
+
+## Federation trust model
+
+:::{warning}
+DFM federation members are mutually trusted, including the ability to execute
+code on peer sites. Admit only trusted participants and trusted code. DFM does
+not isolate a site from a malicious or compromised authenticated member.
+:::
+
+Inter-site payloads may use Python pickle or dynamically imported model classes.
+A member able to send such payloads can cause code execution on a receiving peer;
+payload shape validation and malformed-message handling do not prevent this.
+For the Flare target, authentication and secure transport restrict membership.
+For the local target, participation is controlled by the host and process boundary.
+Administrators must protect membership credentials, configuration and deployed
+code, and apply appropriate host/network access controls. These boundaries do
+not provide a sandbox between mutually untrusted federation members.
 
 ## Architecture Overview
 

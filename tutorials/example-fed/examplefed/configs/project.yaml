@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # This is config file for provisioning in NVIDIA Flare
-# See https://nvflare.readthedocs.io/en/2.6.2/real_world_fl/overview.html for details
+# See https://nvflare.readthedocs.io/en/2.8.0/real_world_fl.html for details
 api_version: 3
 name: examplefed
 description: A small federation with very limited functionality.
@@ -25,7 +25,7 @@ participants:
   # Ensure that the FQDN is correctly mapped in the /etc/hosts file.
 
   # NOTE(ca): patched nvflare.apis.utils.format_check.py::name_check to return False if mapping doesn't contain the type
-  # See https://nvflare.readthedocs.io/en/2.6.2/programming_guide/provisioning_system.html#provisioning for details
+  # See https://nvflare.readthedocs.io/en/2.8.0/programming_guide/provisioning_system.html#provisioning for details
   
   - name: concierge@examplefed.com
     type: admin

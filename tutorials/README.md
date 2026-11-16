@@ -48,10 +48,9 @@ your_project/
 │   │   └── project.yaml             # NVIDIA Flare project config
 │   └── lib/
 │       └── __init__.py              # Your adapter implementations
-├── concierge_example/               # Toy example of adapters and DFM setup
 ├── .dfm-cli.conf.yaml               # CLI config
 ├── .gitignore
-├── federation.yaml                  # List of configured federations
+├── federations.yaml                # List of configured federations
 ├── pyproject.toml
 └── README.md
 ```

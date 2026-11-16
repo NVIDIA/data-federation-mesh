@@ -1,0 +1,369 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Independently registered approved hosted assets; their own usage terms apply. */
+@font-face {
+  font-family: "NVIDIA";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("https://images.nvidia.com/etc/designs/nvidiaGDC/clientlibs_base/fonts/nvidia-sans/GLOBAL/NVIDIASans_W_Rg.woff2") format("woff2"),
+       url("https://images.nvidia.com/etc/designs/nvidiaGDC/clientlibs_base/fonts/nvidia-sans/GLOBAL/NVIDIASans_W_Rg.woff") format("woff");
+}
+
+@font-face {
+  font-family: "NVIDIA";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("https://images.nvidia.com/etc/designs/nvidiaGDC/clientlibs_base/fonts/nvidia-sans/GLOBAL/NVIDIASans_W_Bd.woff2") format("woff2"),
+       url("https://images.nvidia.com/etc/designs/nvidiaGDC/clientlibs_base/fonts/nvidia-sans/GLOBAL/NVIDIASans_W_Bd.woff") format("woff");
+}
+
+/* Independently authored DFM layer. PyData owns component layout and behavior. */
+html {
+  --pst-font-family-base: "NVIDIA", "NVIDIA Sans", Arial, Helvetica, sans-serif;
+  --pst-font-family-heading: var(--pst-font-family-base);
+  --pst-font-family-monospace: "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  --pst-font-size-base: 16px;
+  --pst-header-height: 3rem;
+  --dfm-brand-green: #76b900;
+  --pst-sidebar-secondary: 20.5rem;
+}
+
+html[data-theme="light"] {
+  /* The darker green keeps normal-size links above 4.5:1 on light surfaces. */
+  --pst-color-primary: #004b32;
+  --pst-color-secondary: #004b32;
+  --pst-color-link: #004b32;
+  --pst-color-link-hover: #003823;
+  --pst-color-text-base: #1a1a1a;
+  --pst-color-text-muted: #555555;
+  --pst-color-heading: #000000;
+  --pst-color-background: #ffffff;
+  --pst-color-on-background: #ffffff;
+  --pst-color-surface: #f6f6f6;
+  --pst-color-border: #cbd0d5;
+  --pst-color-inline-code: #004b3c;
+  --dfm-focus: #004b32;
+  --dfm-active-bg: #f6f6f6;
+}
+
+html[data-theme="dark"] {
+  --pst-color-primary: var(--dfm-brand-green);
+  --pst-color-secondary: var(--dfm-brand-green);
+  --pst-color-link: #a8d75b;
+  --pst-color-link-hover: #d1ef9e;
+  --pst-color-text-base: #ececec;
+  --pst-color-text-muted: #bdbdbd;
+  --pst-color-heading: #f5f5f5;
+  --pst-color-background: #171717;
+  --pst-color-on-background: #202020;
+  --pst-color-surface: #2b2b2b;
+  --pst-color-border: #737373;
+  --pst-color-inline-code: #c4e69a;
+  --dfm-focus: #a8d75b;
+  --dfm-active-bg: #2b2b2b;
+}
+
+body {
+  line-height: 1.65;
+}
+
+.bd-main .bd-content .bd-article-container .bd-article {
+  padding-top: 1.125rem;
+}
+
+.bd-page-width {
+  max-width: 92.5rem;
+}
+
+.bd-main,
+.bd-content,
+.bd-article-container,
+.bd-header .navbar-header-items,
+.bd-header .navbar-header-items__start {
+  min-width: 0;
+}
+
+.bd-main .bd-content .bd-article-container {
+  max-width: 48rem;
+  width: 100%;
+}
+
+.bd-article :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--pst-color-heading);
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.bd-article h1 {
+  font-size: 2rem;
+  line-height: 1.15;
+  margin-bottom: 1rem;
+}
+
+.bd-article h2 {
+  font-size: 1.75rem;
+  margin-top: 2.5rem;
+}
+
+.bd-article h3 {
+  font-size: 1.5rem;
+}
+
+.bd-article :is(p, li, dd, a) {
+  overflow-wrap: anywhere;
+}
+
+.bd-article a:not(.headerlink, .sd-stretched-link) {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--dfm-focus) !important;
+  outline-offset: 3px;
+}
+
+/* Reserve space for the configured vertical logo and the full project name. */
+.bd-header .navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 auto;
+  white-space: normal;
+}
+
+.bd-header .navbar-header-items__start {
+  flex: 0 1 22rem;
+  width: auto;
+}
+
+.bd-header .navbar-header-items {
+  flex: 1 1 auto;
+  width: auto;
+}
+
+.bd-header .navbar-header-items__start .navbar-item {
+  min-width: 0;
+}
+
+.bd-header .navbar-brand img {
+  width: 3rem;
+  height: auto;
+  max-height: 2.5rem;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.bd-header .navbar-brand .title {
+  color: var(--pst-color-text-base);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  min-width: 0;
+}
+
+.bd-header {
+  background-color: var(--pst-color-background);
+  border-bottom: 1px solid var(--pst-color-border);
+}
+
+nav :is(a.current, a.active),
+.bd-sidebar-primary li.current > a {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.bd-article :is(code, kbd, samp, pre, .sig) {
+  font-family: var(--pst-font-family-monospace);
+}
+
+.bd-article code.literal {
+  color: var(--pst-color-inline-code);
+  background: var(--pst-color-surface);
+  overflow-wrap: anywhere;
+}
+
+.bd-article div.highlight {
+  border: 1px solid var(--pst-color-border);
+  border-radius: 0.2rem;
+}
+
+.bd-article div.highlight pre {
+  border: 0;
+  box-shadow: none;
+}
+
+.bd-article pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Sphinx API signatures have different whitespace rules from code blocks. */
+.bd-article dl :is(dt.sig, dd),
+.bd-article .sig :is(.sig-name, .sig-prename, .sig-param, .pre) {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.bd-article .sig {
+  line-height: 1.65;
+}
+
+.bd-article table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.bd-article .sd-card {
+  color: var(--pst-color-text-base);
+  background-color: var(--pst-color-on-background);
+  border-color: var(--pst-color-border);
+}
+
+.bd-article .sd-card-header {
+  color: var(--pst-color-heading);
+  background-color: var(--pst-color-surface);
+}
+
+.bd-article .sd-card:focus-within {
+  outline: 3px solid var(--dfm-focus);
+  outline-offset: 3px;
+}
+
+.bd-article .sd-card:hover {
+  border-color: var(--pst-color-primary);
+}
+
+.bd-article ol {
+  list-style-type: decimal;
+}
+
+.bd-article ol ol {
+  list-style-type: lower-alpha;
+}
+
+.bd-article ol ol ol {
+  list-style-type: lower-roman;
+}
+
+@media (max-width: 767.98px) {
+  .bd-header .navbar-brand {
+    gap: 0.5rem;
+  }
+
+  .bd-header .navbar-brand img {
+    width: 3rem;
+  }
+
+  .bd-header .navbar-brand .title {
+    font-size: 0.9rem;
+  }
+
+  .bd-main .bd-content .bd-article-container {
+    padding-inline: 1rem;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .bd-header .navbar-header-items__start {
+    flex: 1 1 0;
+  }
+}
+
+/* Search highlights and stored notebook ANSI output need theme-aware contrast. */
+.bd-article .highlighted,
+.bd-sidebar-primary .highlighted {
+  color: var(--pst-color-text-base);
+  background-color: var(--dfm-active-bg);
+  text-decoration: underline;
+  font-weight: 700;
+}
+
+.bd-article .cell_output .highlight-myst-ansi pre span[class*="-Color"] {
+  color: var(--pst-color-text-base);
+}
+
+/* The header retains the theme search dialog with a compact icon trigger. */
+.bd-header .search-button-field {
+  background-color: var(--pst-color-surface);
+  width: 2.25rem;
+  height: 2.25rem;
+  min-width: 2.25rem;
+  padding: 0.4rem;
+  justify-content: center;
+}
+
+.bd-header .search-button-field :is(.search-button__default-text, .search-button__kbd-shortcut) {
+  display: none;
+}
+
+@media (min-width: 1200px) {
+  .bd-sidebar-primary {
+    flex-basis: 24rem;
+    width: 24rem;
+  }
+}
+
+.bd-header__inner.bd-page-width {
+  max-width: 92rem;
+}
+
+/* Leave TOC scrolling vertical; long labels wrap within the sidebar. */
+.bd-sidebar-secondary .sidebar-secondary-items {
+  width: 100%;
+}
+
+.bd-sidebar-secondary .toc-entry a.nav-link {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+/* The active TOC bar is a brand accent, independent of readable link text. */
+.bd-sidebar-secondary .toc-entry a.nav-link.active {
+  box-shadow: inset 3px 0 var(--dfm-brand-green);
+}
+
+/* Give ultrawide screens more TOC room while retaining the article width. */
+@media (min-width: 1920px) {
+  html {
+    --pst-sidebar-secondary: 24rem;
+  }
+
+  .bd-page-width {
+    max-width: 96rem;
+  }
+
+  .bd-header__inner.bd-page-width {
+    max-width: 95.5rem;
+  }
+}

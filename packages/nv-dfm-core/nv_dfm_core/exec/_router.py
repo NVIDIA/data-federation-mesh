@@ -227,12 +227,7 @@ class Router(ABC):
             and token_package.target_site == self.this_site
         ):
             # this token is for us
-            with self.netrunner.receive_token_transaction() as transaction:
-                transaction.receive_token(
-                    place=token_package.target_place,
-                    frame=token_package.frame,
-                    data=token_package.unwrap_data(),
-                )
+            self._receive_token_package_for_this_site(token_package)
         elif token_package.target_job != self.job_id:
             await self._send_other_job_remote_token_package_async(token_package)
         elif token_package.is_yield:
@@ -251,12 +246,7 @@ class Router(ABC):
             and token_package.target_site == self.this_site
         ):
             # this token is for us
-            with self.netrunner.receive_token_transaction() as transaction:
-                transaction.receive_token(
-                    place=token_package.target_place,
-                    frame=token_package.frame,
-                    data=token_package.unwrap_data(),
-                )
+            self._receive_token_package_for_this_site(token_package)
         elif token_package.target_job != self.job_id:
             self._send_other_job_remote_token_package_sync(token_package)
         elif token_package.is_yield:
@@ -264,6 +254,18 @@ class Router(ABC):
         else:
             # this token is for another job, we need to send it to the other job
             self._send_this_job_remote_token_package_sync(token_package)
+
+    def _receive_token_package_for_this_site(self, token_package: TokenPackage):
+        """Deserialize an incoming token package and hand it to the NetRunner."""
+        try:
+            with self.netrunner.receive_token_transaction() as transaction:
+                transaction.receive_token(
+                    place=token_package.target_place,
+                    frame=token_package.frame,
+                    data=token_package.unwrap_data(),
+                )
+        except Exception as e:  # noqa: BLE001 - surface any receive failure as a job error
+            self.netrunner.panic(e)
 
     async def _send_this_job_yield_token_package_async(
         self, token_package: TokenPackage

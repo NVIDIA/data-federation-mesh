@@ -4,7 +4,7 @@ This directory is a [Cookiecutter](https://cookiecutter.readthedocs.io/) templat
 
 ## Quick start
 
-1. From the repository root (or any directory), run:
+1. From the repository root, run:
 
    ```bash
    cookiecutter tutorials/startup-fed/

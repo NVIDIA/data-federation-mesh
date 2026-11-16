@@ -30,11 +30,12 @@ from ._statement import Statement
 class ForEach(Statement, Block):
     """Takes an iterable and iterates over it, executing the body for each element.
 
-    Usage:
-    seq = ...
-    with ForEach(seq=seq) as e:
-        # body
-        Yield(value=e)
+    Usage::
+
+        seq = ...
+        with ForEach(seq=seq) as e:
+            # body
+            Yield(value=e)
     """
 
     model_config: ConfigDict = ConfigDict(extra="forbid", frozen=True)

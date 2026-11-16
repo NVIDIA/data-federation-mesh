@@ -18,15 +18,34 @@ limitations under the License.
 
 set -e
 
-PLATFORM="linux/{{ provision.docker.build.arch }}"
-FILE="{{ provision.docker.dockerfile.dir }}/{{ provision.docker.dockerfile.file }}"
-CONTEXT="{{ provision.docker.build.context | default('.') }}"
-IMAGE="{{ provision.docker.image }}"
-TAG="{{ provision.docker.tag }}"
-DOCKER="{{ provision.docker.build.engine }}"
+PLATFORM={{ ('linux/' ~ provision.docker.build.arch) | shellquote }}
+FILE={{ ((provision.docker.dockerfile.dir or '.') ~ '/' ~ (provision.docker.dockerfile.file or 'Dockerfile')) | shellquote }}
+CONTEXT={{ provision.docker.build.context | default('.') | shellquote }}
+IMAGE={{ provision.docker.image | shellquote }}
+TAG={{ provision.docker.tag | shellquote }}
+DOCKER={{ provision.docker.build.engine | shellquote }}
+FORMAT=()
 {%- if provision.docker.build.engine == "podman" %}
-FORMAT="--format=docker" 
+FORMAT=(--format=docker)
 {%- endif %}
+
+{%- if provision.docker.build.push.enabled %}
+# Credentials are supplied at runtime and never embedded in generated files.
+REPO={{ provision.docker.build.push.registry.url | shellquote }}
+USERNAME={{ provision.docker.build.push.registry.username | shellquote }}
+USERNAME="${DFM_DOCKER_REGISTRY_USERNAME:-$USERNAME}"
+PASSWORD="${DFM_DOCKER_REGISTRY_PASSWORD:-}"
+{%- if provision.docker.build.push.registry.password %}
+if [[ -z $PASSWORD ]]; then
+    echo "registry.password is no longer embedded; set DFM_DOCKER_REGISTRY_PASSWORD or remove registry.password and use an existing login." >&2
+    exit 1
+fi
+{%- endif %}
+{%- endif %}
+
+# Keep credentials out of every child process; login receives only stdin.
+export -n PASSWORD
+unset DFM_DOCKER_REGISTRY_PASSWORD
 
 if [[ ! -f $FILE ]]; then
     echo "Dockerfile not found at $FILE"
@@ -35,31 +54,28 @@ if [[ ! -f $FILE ]]; then
 fi
 
 # Build image
-$DOCKER build -t $IMAGE:$TAG  --platform $PLATFORM $FORMAT -f $FILE $CONTEXT
+"$DOCKER" build -t "$IMAGE:$TAG" --platform "$PLATFORM" "${FORMAT[@]}" -f "$FILE" "$CONTEXT"
 
 {%- if provision.docker.build.save.enabled %}
 
 # Save image
-IMAGE_FILE="{{provision.docker.build.save.file}}"
-mkdir -p $(dirname $IMAGE_FILE)
-$DOCKER save --output $IMAGE_FILE $IMAGE:$TAG
+IMAGE_FILE={{ provision.docker.build.save.file | shellquote }}
+mkdir -p -- "$(dirname -- "$IMAGE_FILE")"
+"$DOCKER" save --output "$IMAGE_FILE" "$IMAGE:$TAG"
 
 {%- endif %}
 
 {%- if provision.docker.build.push.enabled %}
 
 # Push image to repo
-REPO="{{ provision.docker.build.push.registry.url }}"
-USERNAME="{{ provision.docker.build.push.registry.username }}"
-PASSWORD="{{ provision.docker.build.push.registry.password }}"
-
 if [[ -n $USERNAME && -n $PASSWORD ]]; then
-    echo $PASSWORD | $DOCKER login $REPO --username $USERNAME --password-stdin
+    printf '%s' "$PASSWORD" | "$DOCKER" login "$REPO" --username "$USERNAME" --password-stdin
 fi
+unset PASSWORD
 
 NAME=$REPO/$IMAGE:$TAG
 
-$DOCKER tag $IMAGE:$TAG $NAME
-$DOCKER push $NAME
+"$DOCKER" tag "$IMAGE:$TAG" "$NAME"
+"$DOCKER" push "$NAME"
 
 {%- endif %}

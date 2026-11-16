@@ -43,7 +43,9 @@ tests/logs/
 venv/
 workspace/
 tutorials/weather-fed/weather_fed/fed/
+docs/_build/
 docs/modules/generated/
 docs/tutorials-*/
 public/
+docs_html/
 jupyter_execute/

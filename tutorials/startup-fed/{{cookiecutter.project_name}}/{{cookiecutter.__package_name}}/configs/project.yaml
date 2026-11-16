@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # This is config file for provisioning in NVIDIA Flare
-# See https://nvflare.readthedocs.io/en/2.6.2/real_world_fl/overview.html for details
+# See https://nvflare.readthedocs.io/en/2.8.0/real_world_fl.html for details
 api_version: 3
 name: "{{cookiecutter.__package_name}}"
 description: "{{cookiecutter.description}}"
@@ -25,7 +25,7 @@ participants:
   # Ensure that the FQDN is correctly mapped in the /etc/hosts file.
 
   # NOTE(ca): patched nvflare.apis.utils.format_check.py::name_check to return False if mapping doesn't contain the type
-  # See https://nvflare.readthedocs.io/en/2.6.2/programming_guide/provisioning_system.html#provisioning for details
+  # See https://nvflare.readthedocs.io/en/2.8.0/programming_guide/provisioning_system.html#provisioning for details
     # Flare server (mandatory)
   - name: server
     type: server
@@ -84,5 +84,5 @@ builders:
   #    config_folder: configs
   - path: nvflare.lighter.impl.cert.CertBuilder
   - path: nvflare.lighter.impl.signature.SignatureBuilder
-  - path: dfm.targets.flare.builder.WorkspaceArchiveBuilder
+  - path: nv_dfm_core.targets.flare.builder.WorkspaceArchiveBuilder
 

@@ -28,9 +28,9 @@ pip install nv-dfm-lib-weather
 AI model adapters require GPU hardware and are installed via extras:
 
 ```bash
-pip install nv-dfm-lib-weather[sfno]     # SFNO model
-pip install nv-dfm-lib-weather[cbottle]  # cBottle (Climate in a Bottle) models
-pip install nv-dfm-lib-weather[all]      # all optional dependencies
+pip install "nv-dfm-lib-weather[sfno]"     # SFNO model
+pip install "nv-dfm-lib-weather[cbottle]"  # cBottle (Climate in a Bottle) models
+pip install "nv-dfm-lib-weather[all]"      # all optional dependencies
 ```
 
 ## Data Loaders

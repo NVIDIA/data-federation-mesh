@@ -60,20 +60,30 @@ uv sync --package nv-dfm-core
 
 ## Quick Start
 
+After generating and installing the [example federation](https://github.com/NVIDIA/data-federation-mesh/tree/main/tutorials/example-fed), run:
+
 ```python
-from nv_dfm_core.api import Pipeline, Yield, PlaceParam
-from nv_dfm_core.session import Session
+from nv_dfm_core.api import Pipeline, Yield
+from nv_dfm_core.session import JobStatus
+from examplefed.fed.api.users import GreetMe
+from examplefed.fed.runtime.concierge import get_session
 
-# Define a pipeline
-with Pipeline() as p:
-    result = SomeOperation(...)
-    Yield(value=result)
+def main():
+    with Pipeline() as pipeline:
+        Yield(value=GreetMe(site="reception", name="DFM"))
 
-# Execute with a session (see tutorials for federation setup)
-with Session(federation="my_federation") as session:
-    job = session.execute(p)
-    for result in job.results():
-        print(result)
+    with get_session(target="local") as session:
+        prepared = session.prepare(pipeline)
+        job = session.execute(
+            prepared,
+            place_callbacks={"yield": lambda *args: print(args[-1])},
+        )
+        job.wait_until_finished(timeout=30)
+        assert job.get_status() == JobStatus.FINISHED
+
+
+if __name__ == "__main__":
+    main()
 ```
 
 ## Documentation

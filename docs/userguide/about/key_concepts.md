@@ -118,7 +118,7 @@ For distributed execution, pipelines are translated into a Petri-net-like format
 
 ## Startup Kit
 
-Packages of code, credentials, and configuration produced by the [NVFlare provisioning tool](https://nvflare.readthedocs.io/en/2.6.2/real_world_fl/overview.html) for each federation site. Site admins receive startup kits, verify consistency with their configuration, and use them to deploy the site.
+Packages of code, credentials, and configuration produced by the [NVFlare provisioning tool](https://nvflare.readthedocs.io/en/2.8.0/real_world_fl.html) for each federation site. Site admins receive startup kits, verify consistency with their configuration, and use them to deploy the site.
 
 ## DFM CLI
 

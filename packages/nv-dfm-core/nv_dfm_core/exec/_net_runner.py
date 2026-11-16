@@ -274,6 +274,21 @@ class NetRunner:
         assert self._panic_error is not None
         return self._panic_error
 
+    def panic(self, error: Exception) -> None:
+        """Trip the standard PanicError -> STATUS_PLACE_NAME error-token flow from
+        outside the transition thread pool.
+
+        Idempotent: the first error wins; subsequent calls only ensure shutdown.
+        """
+        with self._scheduling_lock:
+            if self._panic_error is None:
+                self._logger.error(f"NetRunner panic requested: {error}")
+                self._panic_error = PanicError(error=error)
+            self._shutdown_event.set()
+        # Wake the activation thread so it observes the shutdown promptly.
+        with self.work_available:
+            self.work_available.notify()
+
     @property
     def dfm_context(self) -> DfmContext:
         return self._dfm_context

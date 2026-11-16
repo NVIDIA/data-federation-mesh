@@ -19,6 +19,7 @@ import os
 # Load environment variables
 doc_version = os.getenv("DOC_VERSION", "main")
 logging.info(f"Documentation version: {doc_version}")
+version = release = doc_version
 
 # Project information
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -52,6 +53,8 @@ exclude_patterns = [
     "Thumbs.db",
     ".DS_Store",
     "tutorials-example-fed",
+    "tutorials-zero-to-thirty/README.md",
+    "tutorials-weather-fed/README.md",
 ]
 
 html_show_sourcelink = False
@@ -63,7 +66,7 @@ autosummary_generate = True
 html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]
 html_css_files = [
-    "css/nvidia-sphinx-theme.css",
+    "css/dfm-theme.css",
 ]
 html_theme_options = {
     "logo": {
@@ -75,10 +78,6 @@ html_theme_options = {
     "navbar_start": [
         "navbar-logo",
     ],
-    # "switcher": {
-    #     "json_url": "https://raw.githubusercontent.com/NVIDIA/data-federation-mesh/gh-pages/_static/switcher.json",
-    #     "version_match": doc_version,  # Set DOC_VERSION env variable to change
-    # },
     # "external_links": [
     #     {
     #         "name": "Recipes",
@@ -102,6 +101,46 @@ html_theme_options = {
         }
     ],
 }
+html_theme_options["footer_start"] = ["release-version", "copyright"]
+
+# Multi-version docs: env-driven pydata version switcher. Activates only when
+# HCT_DOCS_SWITCHER_URL is set (by the multi-version build job); a normal
+# single-version build is unaffected. HCT_DOC_VERSION selects the active version.
+#
+# This block is part of a CROSS-PIPELINE contract shared with the HCT-managed
+# `main` branch and MUST stay byte-for-byte equivalent to main's conf.py so all
+# pages behave identically. See devdocs/MULTIVERSION-DOCS-RELEASE-BRANCH.md.
+_switcher_url = os.environ.get("HCT_DOCS_SWITCHER_URL", "").strip()
+# Only activate the switcher for a host-qualified URL ("//host/..." or an absolute
+# "https://..."), mirroring HCT's own switcher_url validation. A host-less value like
+# "/_static/switcher.json" (what a non-Pages/local build would produce if the URL were
+# derived unconditionally) is treated as "no switcher" so local docs never render a
+# dropdown that 404s. This guard lives here because conf.py is NOT HCT-generated, so it
+# holds regardless of how the build script derives the URL.
+if _switcher_url.startswith("//") or _switcher_url.startswith("https://"):
+    # Fail fast on CI misconfiguration rather than publishing under the wrong
+    # active version.
+    _doc_version = os.environ.get("HCT_DOC_VERSION")
+    if not _doc_version:
+        raise RuntimeError(
+            "HCT_DOC_VERSION must be set when HCT_DOCS_SWITCHER_URL is set "
+            "(multi-version docs build)."
+        )
+    html_theme_options["switcher"] = {
+        "json_url": _switcher_url,
+        "version_match": _doc_version,
+    }
+    # REQUIRED: otherwise pydata fetches + json.loads() the switcher URL at build
+    # time and fails when it doesn't exist yet (it 404s to an HTML page). The
+    # dropdown is populated client-side at page load instead.
+    html_theme_options["check_switcher"] = False
+    html_theme_options.setdefault(
+        "navbar_end", ["version-switcher", "navbar-icon-links"]
+    )
+    # Do NOT enable show_version_warning_banner: pydata only suppresses it for
+    # the preferred version when versions are semver-comparable; "dev"/"latest"
+    # are not, so it would show "unknown version" on every page.
+
 favicons = ["favicon.ico"]
 
 # Add any paths that contain templates here, relative to this directory.

@@ -30,6 +30,7 @@ The module supports:
 """
 
 import os
+import shlex
 import shutil
 from enum import Enum
 from pathlib import Path
@@ -67,6 +68,11 @@ def to_upper(input: str) -> str:
     Convert a dash-separated string to UPPER_CASE.
     """
     return input.upper().replace("-", "_")
+
+
+def shell_quote(value: Any) -> str:
+    """Render a template value as one literal shell argument."""
+    return shlex.quote(str(value))
 
 
 class Generator:
@@ -446,6 +452,7 @@ class Generator:
             loader=FileSystemLoader(templates_dir),
             autoescape=select_autoescape(),
         )
+        env.filters["shellquote"] = shell_quote
 
         output_dir = self._check_conditions(
             Generator.CheckOperation.GENERATE_DOCKERFILE, force
@@ -466,6 +473,24 @@ class Generator:
                 pattern = "Dockerfile.jinja"
             else:
                 raise ValueError(f"Unsupported skip value: {skip}")
+
+        provision = self._fed_cfg.provision_info
+        if (
+            skip != "scripts"
+            and provision is not None
+            and provision.docker is not None
+            and provision.docker.build is not None
+            and provision.docker.build.push is not None
+            and provision.docker.build.push.enabled
+            and provision.docker.build.push.registry is not None
+            and provision.docker.build.push.registry.password
+        ):
+            click.echo(
+                "Warning: registry.password is no longer embedded in generated scripts. "
+                "Remove it from the configuration and set DFM_DOCKER_REGISTRY_PASSWORD "
+                "when running build_image.sh, or use an existing docker/podman login.",
+                err=True,
+            )
 
         federation_dir = self._fed_cfg.federation_dir
         federation_dir_relative = federation_dir.relative_to(os.getcwd())
@@ -623,6 +648,7 @@ class Generator:
             loader=FileSystemLoader(templates_dir),
             autoescape=select_autoescape(),
         )
+        env.filters["shellquote"] = shell_quote
         template = env.get_template("deploy.sh.jinja")
         assert self._fed_cfg.flare_project_name is not None
         server_sites_upper = [to_upper(site) for site in server_sites]

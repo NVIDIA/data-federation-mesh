@@ -241,34 +241,48 @@ class FlarePoc:
         start_time = time.monotonic()
         flare_session = None
 
-        # Poll for client connections until timeout
-        while time.monotonic() - start_time <= timeout:
-            try:
-                # Create session if not already connected
-                if not flare_session:
-                    flare_session = self.connect()
-                    assert flare_session is not None
-                    click.echo("Connected to Flare.")
+        try:
+            # Poll for client connections until timeout
+            while time.monotonic() - start_time <= timeout:
+                try:
+                    # Create session if not already connected
+                    if not flare_session:
+                        flare_session = self.connect()
+                        assert flare_session is not None
+                        click.echo("Connected to Flare.")
 
-                # Get list of connected clients
-                clients = flare_session.get_connected_client_list()
-                click.echo(f"Connected clients: {len(clients)}/{len(expected_sites)}")
+                    # Get list of connected clients
+                    clients = flare_session.get_connected_client_list()
+                    click.echo(
+                        f"Connected clients: {len(clients)}/{len(expected_sites)}"
+                    )
 
-                # Check if we have all expected clients
-                if len(clients) >= len(expected_sites):
-                    click.echo("Flare ready.")
-                    return
+                    # Check if we have all expected clients
+                    if len(clients) >= len(expected_sites):
+                        click.echo("Flare ready.")
+                        return
 
-                # Wait before next check
-                time.sleep(1)
-            except Exception as e:
-                # Handle connection errors with retry
-                click.echo(f"Error waiting for Flare: {e}")
-                time.sleep(5)
+                    # Wait before next check
+                    time.sleep(1)
+                except Exception as e:
+                    # Handle connection errors with retry
+                    click.echo(f"Error waiting for Flare: {e}")
+                    time.sleep(5)
 
-        # If we get here, we've timed out
-        click.echo(click.style("Timeout waiting for Flare.", fg="red"))
-        raise click.Abort()
+            # If we get here, we've timed out
+            click.echo(click.style("Timeout waiting for Flare.", fg="red"))
+            raise click.Abort()
+        finally:
+            # Always close the admin API session. Under NVFlare 2.8+ its gRPC
+            # worker threads are non-daemon, so leaving the session open keeps
+            # `dfm poc start` alive after "Flare is ready!" -- the command never
+            # exits, and callers that capture its output (the e2e POC harness)
+            # hang until timeout even though POC started successfully.
+            if flare_session is not None:
+                try:
+                    flare_session.close()
+                except Exception:
+                    pass
 
     def cleanup(self):
         """Clean up the Flare POC workspace.

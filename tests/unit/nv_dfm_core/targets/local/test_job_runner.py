@@ -357,6 +357,42 @@ class TestJobRunnerRoutingThread:
         assert "Background monitor thread error" in error_call
         assert "Test error" in error_call
 
+    def test_routing_thread_survives_bad_token_and_keeps_going(
+        self, job_runner: JobRunner
+    ):
+        """A failing token must not tear down the routing loop: a subsequent
+        token for the same site must still be delivered (regression guard for the
+        break -> continue fix that otherwise hangs the job)."""
+        mock_router = MagicMock()
+        # First call raises, second (and later) succeed.
+        mock_router.route_token_package_sync.side_effect = [
+            Exception("bad token"),
+            None,
+        ]
+
+        def _pkg(place: str) -> TokenPackage:
+            return TokenPackage.wrap_data(
+                source_site="source_site",
+                source_node=1,
+                source_job="source_job",
+                target_site="test_site",
+                target_place=place,
+                target_job="target_job",
+                is_yield=False,
+                frame=Frame.start_frame(0),
+                data={"test": "data"},
+            )
+
+        job_runner._channels["test_site"].put(_pkg("bad"))
+        job_runner._channels["test_site"].put(_pkg("good"))
+
+        job_runner._start_routing_thread(mock_router)
+        time.sleep(0.3)
+        job_runner._stop_routing_thread()
+
+        # Both tokens were processed -> the thread did NOT die on the first error.
+        assert mock_router.route_token_package_sync.call_count == 2
+
 
 class TestJobRunnerJobSubmission:
     """Test JobRunner job submission handling."""

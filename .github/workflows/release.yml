@@ -32,6 +32,9 @@ jobs:
   build-wheels:
     name: Build Wheels
     needs: resolve-image
+    permissions:
+      contents: read
+      packages: read
     runs-on: linux-amd64-cpu4
     container:
       image: ${{ needs.resolve-image.outputs.ci_image }}
@@ -44,9 +47,41 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
+          persist-credentials: false
 
       - name: Build wheels
         run: ci/scripts/python-build-wheels-gh.sh
+
+      - name: Validate rebuilt distributions
+        run: python3 ci/scripts/check_wheel_metadata.py artifacts/dist --release-version "${GITHUB_REF_NAME#nv-dfm-v}"
+
+      - name: Test rebuilt wheels in an isolated environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime="$(mktemp -d)"
+          trap 'rm -rf "$runtime"' EXIT
+          uv --no-config venv --python 3.12 "$runtime/environment"
+          uv --no-config pip install --python "$runtime/environment/bin/python" artifacts/dist/*.whl
+          uv --no-config pip check --python "$runtime/environment/bin/python"
+          "$runtime/environment/bin/dfm" --help
+          EXPECTED_VERSION="${GITHUB_REF_NAME#nv-dfm-v}" "$runtime/environment/bin/python" -I - <<'PY'
+          import importlib
+          import importlib.metadata
+          import os
+          import pathlib
+          import sys
+
+          for name in ("nv-dfm-core", "nv-dfm-lib-common", "nv-dfm-lib-weather"):
+              assert importlib.metadata.version(name) == os.environ["EXPECTED_VERSION"], name
+              module = importlib.import_module(name.replace("-", "_"))
+              assert pathlib.Path(module.__file__).resolve().is_relative_to(pathlib.Path(sys.prefix).resolve()), name
+          from nv_dfm_lib_weather.load_data import LoadGfsEra5Data
+          PY
+
+      - name: Record release package hashes
+        working-directory: artifacts/dist
+        run: sha256sum *.whl *.tar.gz > SHA256SUMS
 
       - name: Upload wheel artifacts
         uses: actions/upload-artifact@v4

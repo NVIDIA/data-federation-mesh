@@ -22,6 +22,7 @@ from __future__ import annotations
 from typing import Literal, Union
 
 from nv_dfm_core.api import Advise, NodeParam, PlaceParam
+from pydantic import ConfigDict
 
 from ...api.users import GreetMe as GreetMe_1
 
@@ -35,9 +36,9 @@ class GreetMe(GreetMe_1):
             In the local concierge site, a user can override the default greeting using a format string like 'Hello from {name}!'
     """
 
-    class Config:
-        arbitrary_types_allowed = True
-
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
     site: Literal['concierge'] = 'concierge'
     provider: None = None
     dfm_class_name: Literal['examplefed.fed.site.concierge.users.GreetMe'] = (

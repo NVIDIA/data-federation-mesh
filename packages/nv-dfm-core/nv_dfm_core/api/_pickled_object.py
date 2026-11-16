@@ -16,7 +16,6 @@
 import base64
 import json
 import pickle
-from binascii import Error as BinAsciiError
 from typing import Any, Literal
 
 from pydantic import BaseModel, model_validator
@@ -70,12 +69,15 @@ class PickledObject(BaseModel):
     ) -> Self:
         """Deserialize the object by base64 decoding and unpickling it."""
         if isinstance(obj, dict) and "value" in obj:
+            if not isinstance(obj["value"], str):
+                raise ValueError(
+                    f"PickledObject 'value' must be a str, got {type(obj['value']).__name__}"
+                )
             try:
-                assert isinstance(obj["value"], str), "Value must be a string"
                 decoded = base64.b64decode(obj["value"].encode("utf-8"))
                 value = pickle.loads(decoded)
                 return cls(value=value)
-            except (BinAsciiError, pickle.UnpicklingError) as e:
+            except Exception as e:
                 raise ValueError(f"Failed to decode/unpickle value: {str(e)}")
         return cls(value=obj)
 

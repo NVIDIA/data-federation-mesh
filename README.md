@@ -60,6 +60,8 @@ data-federation-mesh/
 
 ### Installation from PyPI
 
+Core/common support Python 3.10–3.12; the weather library and full source workspace require Python 3.12. Use Python 3.12 for all tutorials.
+
 ```bash
 # Install core framework only
 pip install nv-dfm-core
@@ -67,10 +69,12 @@ pip install nv-dfm-core
 # Install weather adapters library (see warning below)
 pip install nv-dfm-lib-weather
 
-# Install weather adapters with AI model support (requires GPU, see below)
-pip install nv-dfm-lib-weather[cbottle]   # cBottle model adapters
-pip install nv-dfm-lib-weather[sfno]      # SFNO model adapters
-pip install nv-dfm-lib-weather[all]       # all AI model adapters
+# Install weather adapters with AI model support (requires GPU, see below).
+# Pick the extra(s) you need; combine them in one command to get several.
+pip install "nv-dfm-lib-weather[cbottle]"        # cBottle model adapters
+pip install "nv-dfm-lib-weather[sfno]"           # SFNO model adapters
+pip install "nv-dfm-lib-weather[cbottle,sfno]"   # both
+pip install "nv-dfm-lib-weather[all]"            # all AI model adapters
 ```
 
 > **Note:** `nv-dfm-lib-weather` depends on `earth2studio`, which may require additional dependencies depending on your environment. The SFNO and cBottle AI model adapters additionally require a CUDA-capable NVIDIA GPU and model-specific setup. See the [installation guide][dfm_install_url] for full prerequisites.
@@ -97,7 +101,8 @@ uv sync --all-packages
 # Install a single package (for example core only)
 uv sync --package nv-dfm-core
 
-# Install with tutorial extras (adds JupyterLab, ipywidgets, leafmap)
+# Install with tutorial extras (adds ipywidgets, leafmap). Open the .ipynb
+# tutorials with your own Jupyter frontend (JupyterLab / VS Code / etc.).
 uv sync --all-packages --extra tutorials
 ```
 
@@ -105,6 +110,12 @@ uv sync --all-packages --extra tutorials
 > exactly the requested set of packages. Syncing for a single package will remove
 > dependencies that are not required by that package. Use `--all-packages` when you need
 > the full workspace available.
+
+After syncing, activate the environment before running `dfm` commands directly:
+
+```bash
+source .venv/bin/activate
+```
 
 ### Examples
 

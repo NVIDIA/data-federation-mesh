@@ -43,6 +43,7 @@ from nvflare.apis.utils.reliable_message import (
 )
 from nvflare.fuel.f3.cellnet.fqcn import FQCN  # pyright: ignore[reportMissingImports]
 
+from nv_dfm_core.api import STATUS_PLACE_NAME, ErrorToken
 from nv_dfm_core.exec import (
     Frame,
     JobController,
@@ -89,6 +90,10 @@ class ClientTaskResultLogger:
                 f"Task {self._task_name}, client {client_name} returned return code {rc}: {error}",
             )
 
+    def get_missing_clients(self, client_names: list[str]) -> list[str]:
+        responded = {client_name for _, client_name, _ in self._client_results}
+        return [name for name in client_names if name not in responded]
+
     def get_overall_client_return_code(self) -> str:
         if len(self._client_results) != self._expected_num_clients:
             return ReturnCode.EXECUTION_EXCEPTION
@@ -127,6 +132,7 @@ class Controller(FlareController):
         self._options: FlareOptions = options
 
         self._cw_started: bool = False
+        self._client_failure: Exception | None = None
         self._asked_to_stop: bool = False
         self._app_io_manager: AppIOManager = AppIOManager()
         # Enable debug mode if environment variable is set
@@ -356,6 +362,8 @@ class Controller(FlareController):
             self.log_info(fl_ctx, "Client execution failed or was aborted, aborting")
             if self._job_controller is not None:
                 self._job_controller.shutdown()
+            if rc != ReturnCode.OK:
+                self._report_client_failure_to_homesite(fl_ctx, rc)
             return make_reply(ReturnCode.TASK_ABORTED)
 
         ################################
@@ -510,8 +518,21 @@ class Controller(FlareController):
             fl_ctx=fl_ctx,
             abort_signal=self._abort_signal,
         )
-        if result_logger.get_overall_client_return_code() != ReturnCode.OK:
+        client_rc = result_logger.get_overall_client_return_code()
+        if client_rc != ReturnCode.OK:
             result_logger.log_results()
+            missing = result_logger.get_missing_clients(self._client_names)
+            if missing:
+                self._client_failure = TimeoutError(
+                    f"Clients {missing} did not finish task {Constant.TASK_START_EXECUTION} "
+                    f"within the Flare task timeout of {self._options.task_timeout_s}s "
+                    "(FlareOptions.task_timeout_s / DFM_FLARE_TASK_TIMEOUT). The timeout "
+                    "covers the whole job, so the job was stopped and any later results were lost."
+                )
+                self.log_error(fl_ctx, str(self._client_failure))
+            # Do not wait for the own net runner: it may be waiting for tokens from
+            # a failed client and never finish. control_flow shuts it down.
+            return client_rc
 
         # wait for the own net runner to finish
         if self._job_controller:
@@ -529,7 +550,34 @@ class Controller(FlareController):
             )
             return ReturnCode.EXECUTION_EXCEPTION
 
-        return result_logger.get_overall_client_return_code()
+        return client_rc
+
+    def _report_client_failure_to_homesite(self, fl_ctx: FLContext, rc: str) -> None:
+        """Send an error token to the homesite status place and persist the remaining
+        results, so the app sees why the job ended instead of waiting for results that
+        will never come."""
+        error = self._client_failure or RuntimeError(
+            f"Task {Constant.TASK_START_EXECUTION} failed on the clients with return code {rc}"
+        )
+        try:
+            job_id = fl_ctx.get_job_id() or "unknown"
+            self._app_io_manager.receive_token_package(
+                TokenPackage.wrap_data(
+                    source_site="server",
+                    source_node="__controller__",
+                    source_job=job_id,
+                    target_site=self._homesite,
+                    target_place=STATUS_PLACE_NAME,
+                    target_job=job_id,
+                    is_yield=True,
+                    frame=Frame.stop_frame(),
+                    data=ErrorToken.from_exception(error),
+                    trace_context=None,
+                )
+            )
+            self._app_io_manager.save_all_remaining(fl_ctx)
+        except Exception as e:
+            self.log_error(fl_ctx, f"Failed to report client failure to homesite: {e}")
 
     def _do_handle_finalization(self, fl_ctx: FLContext):
         """All the clients finished successfully. Wait for our own

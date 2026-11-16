@@ -43,7 +43,7 @@ def create_gradient(shape: tuple[int, ...], min: float = 0.0, max: float = 1.0) 
     return np.asarray((max - min) * grad + min)
 
 
-def subset(array: np.ndarray, index: list[int, ...]) -> np.ndarray:
+def subset(array: np.ndarray, index: list[int]) -> np.ndarray:
     return array[tuple(index)]
 
 

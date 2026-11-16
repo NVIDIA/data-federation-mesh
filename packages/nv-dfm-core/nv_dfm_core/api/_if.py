@@ -30,10 +30,11 @@ from ._statement import Statement
 class If(Statement, Block):
     """IfTrue is a statement that executes the body if the condition is true.
 
-    Usage:
-    cond = ...
-    with If(cond=cond) as test:
-            # body
+    Usage::
+
+        cond = ...
+        with If(cond=cond) as test:
+                # body
     """
 
     model_config: ConfigDict = ConfigDict(extra="forbid", frozen=True)

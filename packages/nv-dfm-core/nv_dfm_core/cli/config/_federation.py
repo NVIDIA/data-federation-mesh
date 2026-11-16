@@ -257,11 +257,21 @@ class FederationConfig:
     def admin_package(self) -> Path:
         """
         Get the path to the admin package.
+
+        NVFlare 2.7+ provisions the POC workspace under the Flare *project* name
+        (from project.yaml's `name`), not DFM's module name, so `dfm poc start`
+        must look under `flare_project_name` — otherwise the submitter connects to
+        a non-existent path and hangs/times out.
         """
         assert self.name
-        assert self.module
+        assert self.flare_project_name
         assert self.app_name
-        return self.federation_workspace_dir / self.module / "prod_00" / self.app_name
+        return (
+            self.federation_workspace_dir
+            / self.flare_project_name
+            / "prod_00"
+            / self.app_name
+        )
 
     def patch(self, values: GenericConfigDataT | str | Path | list[Path]) -> None:
         """

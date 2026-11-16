@@ -23,12 +23,12 @@ WORKSPACE_INIT="${DFM_FLARE_WORKSPACE_INIT:-/workspace-init/workspace.tgz}"
 
 if [[ -f $WORKSPACE_INIT ]]; then
     echo "Found workspace init package, preparing workspace."
-    workspace_dir=$(dirname $DFM_FLARE_WORKSPACE)
-    mkdir -p $workspace_dir
-    tar xvf $WORKSPACE_INIT -C $workspace_dir
+    workspace_dir=$(dirname -- "$DFM_FLARE_WORKSPACE")
+    mkdir -p -- "$workspace_dir"
+    tar xvf "$WORKSPACE_INIT" -C "$workspace_dir"
 else
     echo "Couldn't find workspace init package, aborting."
     exit 1
 fi
 
-${DFM_FLARE_WORKSPACE}/startup/sub_start.sh
+"${DFM_FLARE_WORKSPACE}/startup/sub_start.sh"

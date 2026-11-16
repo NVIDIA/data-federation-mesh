@@ -25,6 +25,7 @@ from nvflare.apis.fl_context import FLContext
 from nvflare.apis.shareable import Shareable
 from nvflare.apis.signal import Signal
 
+from nv_dfm_core.api import STATUS_PLACE_NAME, ErrorToken
 from nv_dfm_core.gen.modgen.ir import BoundNetIR, NetIR
 from nv_dfm_core.targets.flare._controller import ClientTaskResultLogger, Controller
 from nv_dfm_core.targets.flare._defs import Constant
@@ -257,11 +258,23 @@ class TestController:
         controller._abort_signal = mock_abort_signal
         controller._client_names = ["client1", "client2"]
         controller._job_controller = MagicMock()
+        controller._job_controller.error_occurred.return_value = False
         controller.workflow_id = "test-workflow-123"
         controller.log_error = MagicMock()
-        controller.broadcast_and_wait = MagicMock()
 
-        _result = controller._make_clients_do_start_execute_task(mock_fl_ctx)
+        def respond_all(task, **_kwargs):
+            for name in ["client1", "client2"]:
+                client_task = MagicMock()
+                client_task.result = MagicMock(spec=Shareable)
+                client_task.result.get_return_code.return_value = ReturnCode.OK
+                client_task.client.name = name
+                task.result_received_cb(client_task, mock_fl_ctx)
+
+        controller.broadcast_and_wait = MagicMock(side_effect=respond_all)
+
+        result = controller._make_clients_do_start_execute_task(mock_fl_ctx)
+
+        assert result == ReturnCode.OK
 
         # Verify send_and_wait was called
         controller.broadcast_and_wait.assert_called_once()
@@ -470,6 +483,7 @@ class TestController:
             return_value=ReturnCode.EXECUTION_EXCEPTION
         )
         controller._job_controller = MagicMock()
+        controller._app_io_manager = MagicMock()
         controller.log_info = MagicMock()
 
         result = controller.control_flow(mock_abort_signal, mock_fl_ctx)
@@ -477,6 +491,75 @@ class TestController:
         assert result is not None
         assert result.get_return_code() == ReturnCode.TASK_ABORTED
         controller._job_controller.shutdown.assert_called_once()
+
+        # The app gets an error token on the status place and the queue is persisted
+        controller._app_io_manager.receive_token_package.assert_called_once()
+        token_package = controller._app_io_manager.receive_token_package.call_args[0][0]
+        assert token_package.target_site == "test-app"
+        assert token_package.target_place == STATUS_PLACE_NAME
+        assert token_package.is_yield
+        error_token = ErrorToken.model_validate(token_package.unwrap_data())
+        assert error_token.errors[0].type == "RuntimeError"
+        assert ReturnCode.EXECUTION_EXCEPTION in error_token.errors[0].message
+        controller._app_io_manager.save_all_remaining.assert_called_once_with(
+            mock_fl_ctx
+        )
+
+    def test_make_clients_do_start_execute_task_timeout(
+        self, controller: Controller, mock_fl_ctx: FLContext, mock_abort_signal: Signal
+    ):
+        """A client that never reports back (task timeout) is named in the failure."""
+        controller._abort_signal = mock_abort_signal
+        controller._client_names = ["client1", "client2"]
+        controller._job_controller = MagicMock()
+        controller._job_controller.error_occurred.return_value = False
+        controller.workflow_id = "test-workflow-123"
+        controller.log_error = MagicMock()
+
+        def respond_client1_only(task, **_kwargs):
+            client_task = MagicMock()
+            client_task.result = MagicMock(spec=Shareable)
+            client_task.result.get_return_code.return_value = ReturnCode.OK
+            client_task.client.name = "client1"
+            task.result_received_cb(client_task, mock_fl_ctx)
+
+        controller.broadcast_and_wait = MagicMock(side_effect=respond_client1_only)
+
+        rc = controller._make_clients_do_start_execute_task(mock_fl_ctx)
+
+        assert rc == ReturnCode.EXECUTION_EXCEPTION
+        assert isinstance(controller._client_failure, TimeoutError)
+        message = str(controller._client_failure)
+        assert "['client2']" in message
+        assert f"{controller._options.task_timeout_s}s" in message
+        controller.log_error.assert_any_call(mock_fl_ctx, message)
+        # The server net may be waiting for tokens from the timed-out client, so
+        # waiting for it here could block forever; control_flow shuts it down.
+        controller._job_controller.wait_for_done.assert_not_called()
+
+    def test_control_flow_client_timeout_reports_timeout_error(
+        self, controller: Controller, mock_fl_ctx: FLContext, mock_abort_signal: Signal
+    ):
+        """The timeout recorded by the broadcast is what the app receives."""
+        controller._abort_signal = mock_abort_signal
+        controller._do_prepare = MagicMock()
+        controller._do_start_netrunner = MagicMock()
+
+        def time_out(_fl_ctx):
+            controller._client_failure = TimeoutError("client1 timed out")
+            return ReturnCode.EXECUTION_EXCEPTION
+
+        controller._make_clients_do_start_execute_task = MagicMock(side_effect=time_out)
+        controller._job_controller = MagicMock()
+        controller._app_io_manager = MagicMock()
+        controller.log_info = MagicMock()
+
+        controller.control_flow(mock_abort_signal, mock_fl_ctx)
+
+        token_package = controller._app_io_manager.receive_token_package.call_args[0][0]
+        error_token = ErrorToken.model_validate(token_package.unwrap_data())
+        assert error_token.errors[0].type == "TimeoutError"
+        assert error_token.errors[0].message == "client1 timed out"
 
 
 class TestClientTaskResultLogger:
@@ -607,3 +690,21 @@ class TestClientTaskResultLogger:
 
         result = result_logger.get_overall_client_return_code()
         assert result == ReturnCode.EXECUTION_EXCEPTION
+
+    def test_get_missing_clients(self):
+        """Clients without a result are reported as missing, in target order."""
+        result_logger = ClientTaskResultLogger(
+            logger=MagicMock(),
+            task_name="test_task",
+            expected_num_clients=3,
+            fl_ctx=MagicMock(),
+        )
+
+        result_logger._client_results = [
+            (ReturnCode.EXECUTION_EXCEPTION, "client2", "Error")
+        ]
+
+        assert result_logger.get_missing_clients(["client1", "client2", "client3"]) == [
+            "client1",
+            "client3",
+        ]

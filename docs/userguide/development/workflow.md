@@ -35,7 +35,7 @@ For a specific federation, site administrators and the federation administrator 
 
 ### 3. Provisioning Time
 
-The federation administrator gathers the configuration files and runs the provisioning tool, which generates "startup kits" for each participating site and for users. These startup kits contain generated code, configurations, and certificates. The generated API is what users import in their application code to interact with the federation. The federation administrator then distributes the startup kits to all site administrators. See the [NVIDIA Flare guide](https://nvflare.readthedocs.io/en/2.6.2/real_world_fl/overview.html) for details on provisioning and startup kits.
+The federation administrator gathers the configuration files and runs the provisioning tool, which generates "startup kits" for each participating site and for users. These startup kits contain generated code, configurations, and certificates. The generated API is what users import in their application code to interact with the federation. The federation administrator then distributes the startup kits to all site administrators. See the [NVIDIA Flare guide](https://nvflare.readthedocs.io/en/2.8.0/real_world_fl.html) for details on provisioning and startup kits.
 
 ### 4. Deployment Time
 

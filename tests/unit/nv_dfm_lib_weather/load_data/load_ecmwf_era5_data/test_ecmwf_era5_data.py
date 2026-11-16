@@ -188,6 +188,71 @@ class TestLoadEcmwfEra5Data:
     @patch("nv_dfm_lib_weather.load_data._load_ecmwf_era5_data.xarray.open_dataset")
     @patch("nv_dfm_lib_weather.load_data._load_ecmwf_era5_data.time.sleep")
     @patch("nv_dfm_lib_weather.load_data._load_ecmwf_era5_data.random.uniform")
+    def test_body_impl_ignores_unknown_selection_keys(
+        self,
+        mock_random,
+        mock_sleep,
+        mock_open_dataset,
+        mock_site,
+        mock_provider,
+        sample_dataset,
+    ):
+        """Unknown selection keys are ignored, not forwarded to ds.sel().
+
+        Regression test: passing an extra key that is not a dimension or
+        coordinate (e.g. ``{"time": ..., "garbage": "garbage"}``) used to raise
+        ``'garbage' is not a valid dimension or coordinate``. Discovery advises
+        ``selection`` with ``allow_extras=True``, so extras must be tolerated.
+        """
+        mock_random.return_value = 0.5
+        mock_open_dataset.return_value = sample_dataset
+
+        loader = LoadEcmwfEra5Data(mock_site, mock_provider)
+
+        variables = ["2m_temperature"]
+        selection = {"time": "2020-01-01T12:00:00", "garbage": "garbage"}
+
+        # Should not raise even though "garbage" is not a dim/coord.
+        result = loader.body_impl(variables, selection)
+
+        assert isinstance(result, xr.Dataset)
+        assert "2m_temperature" in result.data_vars
+        # The valid "time" selection was still applied (single nearest point).
+        assert result.sizes["time"] == 1
+        # The ignored key was logged as a warning.
+        loader._logger.warning.assert_called_once()
+
+    @patch("nv_dfm_lib_weather.load_data._load_ecmwf_era5_data.xarray.open_dataset")
+    @patch("nv_dfm_lib_weather.load_data._load_ecmwf_era5_data.time.sleep")
+    @patch("nv_dfm_lib_weather.load_data._load_ecmwf_era5_data.random.uniform")
+    def test_body_impl_with_only_unknown_selection_keys(
+        self,
+        mock_random,
+        mock_sleep,
+        mock_open_dataset,
+        mock_site,
+        mock_provider,
+        sample_dataset,
+    ):
+        """A selection with only unknown keys applies no filtering and still loads."""
+        mock_random.return_value = 0.5
+        mock_open_dataset.return_value = sample_dataset
+
+        loader = LoadEcmwfEra5Data(mock_site, mock_provider)
+
+        variables = ["2m_temperature"]
+        selection = {"garbage": "garbage"}
+
+        result = loader.body_impl(variables, selection)
+
+        assert isinstance(result, xr.Dataset)
+        assert "2m_temperature" in result.data_vars
+        # No valid keys -> no selection applied, full time axis retained.
+        assert result.sizes["time"] == sample_dataset.sizes["time"]
+
+    @patch("nv_dfm_lib_weather.load_data._load_ecmwf_era5_data.xarray.open_dataset")
+    @patch("nv_dfm_lib_weather.load_data._load_ecmwf_era5_data.time.sleep")
+    @patch("nv_dfm_lib_weather.load_data._load_ecmwf_era5_data.random.uniform")
     def test_body_impl_with_empty_selection(
         self,
         mock_random,
@@ -299,7 +364,7 @@ class TestLoadEcmwfEra5Data:
 
         loader = LoadEcmwfEra5Data(mock_site, mock_provider)
 
-        # Test with default engine kwargs (empty dict)
+        # Test with default engine kwargs (anonymous GCS access)
         variables = ["2m_temperature"]
         selection = {}
 
@@ -318,6 +383,7 @@ class TestLoadEcmwfEra5Data:
             "cache": False,
             "decode_times": True,
             "engine": "zarr",
+            "storage_options": {"token": "anon"},
         }
 
     @patch("nv_dfm_lib_weather.load_data._load_ecmwf_era5_data.xarray.open_dataset")

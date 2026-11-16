@@ -27,6 +27,7 @@ These tutorials are designed to be run interactively. The notebooks contain inli
 |---|----------|-------------|
 | 1 | [Basic Pipeline](01-basic-pipeline.ipynb) | Set up a weather federation and run your first pipeline |
 | 2 | [Loaders and Transforms](02-weather-loaders-and-transforms.ipynb) | Work with weather data loaders and transform operations |
+| 3 | [SFNO Forecast](03-sfno-forecast.ipynb) | Run the SFNO AI weather model end-to-end (requires a GPU + AI model extras) |
 
 ## Prerequisites
 
@@ -41,10 +42,14 @@ From the repository root, install DFM and the tutorial dependencies:
 uv sync --all-packages --extra tutorials
 ```
 
-Then launch JupyterLab:
+Then open the notebooks with your preferred Jupyter frontend (for example
+JupyterLab, Jupyter Notebook, or the VS Code / Cursor notebook editor). DFM does
+not bundle a notebook UI; install one into the project environment if you'd like
+to launch it from here, e.g.:
 
 ```bash
-uv run jupyter lab
+uv pip install jupyterlab
+uv run --no-sync jupyter lab
 ```
 
 Open the notebooks in order and follow along.

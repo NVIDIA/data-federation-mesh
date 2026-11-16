@@ -14,9 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from multiprocessing import Lock, Queue
 from pathlib import Path
-from queue import Empty
+from queue import Empty, Queue
+from threading import Lock
 
 from nvflare.apis.fl_constant import FLContextKey
 from nvflare.apis.fl_context import FLContext
@@ -34,8 +34,10 @@ class AppIOManager:
     """
 
     def __init__(self):
-        # use a multiprocessing queue because different threads may need to access it
-        self._queue = Queue()
+        # Only threads of the server job process share this queue. Do not use a
+        # multiprocessing.Queue: its put() is asynchronous, so empty() can still be
+        # True right after a put() and get_all()/save_all_remaining() drop tokens.
+        self._queue: Queue[TokenPackage] = Queue()
         self._get_all_lock = Lock()
         self._frozen = False
 
@@ -55,8 +57,8 @@ class AppIOManager:
                 return []
             results = []
             try:
-                while not self._queue.empty():
-                    results.append(self._queue.get())
+                while True:
+                    results.append(self._queue.get_nowait())
             except Empty:
                 pass
             return results

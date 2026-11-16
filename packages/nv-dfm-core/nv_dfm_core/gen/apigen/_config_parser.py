@@ -34,10 +34,10 @@ from __future__ import annotations
 
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, ClassVar, TypeVar, cast
 
 from datamodel_code_generator import LiteralType, snooper_to_methods
-from datamodel_code_generator.model import pydantic as pydantic_model
+from datamodel_code_generator.model import pydantic_v2 as pydantic_model
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
@@ -125,7 +125,7 @@ def determine_final_json_schema(
                         + " as well as the fully-qualified class name of user-defined Pydantic models,"
                         + " which are type strings that contain a dot."
                         + " Note that the magic 'python-object' value was removed. Use the user-defined type"
-                        + " 'dfm.api.PickledObject' instead."
+                        + " 'nv_dfm_core.api.PickledObject' instead."
                     )
         else:
             # no type given, which implies Any. Nothing to do for us, just append it
@@ -240,6 +240,14 @@ class MyFieldModel(pydantic_model.DataModelField):
         return False
 
 
+class MyBaseModel(pydantic_model.BaseModel):
+    """Pydantic v2 data model with datamodel-code-generator's collision-driven
+    field renaming disabled.
+    """
+
+    SUPPORTS_FIELD_RENAMING: ClassVar[bool] = False
+
+
 @snooper_to_methods()
 class ConfigParser(JsonSchemaParser):
     """Parser that converts DFM federation configuration into Python code.
@@ -257,6 +265,7 @@ class ConfigParser(JsonSchemaParser):
     ):
         super().__init__(  # pyright: ignore[reportUnknownMemberType]
             source="",
+            data_model_type=MyBaseModel,
             data_model_field_type=MyFieldModel,
             base_path=base_path,
             # make sure the "description" from the config is added as a comment
@@ -315,7 +324,12 @@ class ConfigParser(JsonSchemaParser):
                 + f" The resolved body was retrieved from ref file {ref_file} with base path {self.base_path}"
                 + f" and has contents: {ref_body}."
             )
-        return resolved
+        if not isinstance(resolved, dict):
+            raise ValueError(
+                f"Could not resolve JSON reference {ref} into a schema object."
+                + f" Expected a mapping but got {type(resolved).__name__}: {resolved!r}."
+            )
+        return cast("dict[str, Any]", resolved)
 
     def resolve_object(
         self, obj: str | ReferenceToObject | BaseModelT, object_type: type[BaseModelT]
@@ -535,6 +549,18 @@ class ConfigParser(JsonSchemaParser):
             param_docs=param_docs,
             returns=raw_obj.get("returns", None),
         )
+
+        operations_raw = self.raw_obj.get("operations")
+        if isinstance(operations_raw, dict) and operation_name in operations_raw:
+            operations_raw[operation_name]["properties"] = {
+                name: (
+                    schema.model_dump(by_alias=True, exclude_none=True)
+                    if isinstance(schema, JsonSchemaObject)
+                    else schema
+                )
+                for name, schema in new_properties.items()
+            }
+            operations_raw[operation_name]["required"] = list(raw_obj["required"])
 
         self.parse_raw_obj(
             klassname,

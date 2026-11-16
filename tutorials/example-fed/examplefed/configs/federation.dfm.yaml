@@ -41,10 +41,9 @@ provision:
         enabled: false
         registry:
           url: localhost/examplefed
-          # If not provided or empty, login is skipped
-          # Can be literal values or env variables (e.g. $CI_REGISTRY_USER)
+          # Literal username; override with DFM_DOCKER_REGISTRY_USERNAME at runtime.
+          # Set DFM_DOCKER_REGISTRY_PASSWORD at runtime to log in, or use an existing login.
           username: examplefed
-          password: examplefed
   helm:
     # Path should be relative to federation directory configured in CLI.
     # It is managed using dfm fed config command(s).

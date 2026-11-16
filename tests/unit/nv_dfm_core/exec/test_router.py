@@ -549,6 +549,84 @@ class TestEdgeCases:
         )
 
 
+class TestMalformedIncomingTokenPackage:
+    """A token package destined for this site whose payload fails to deserialize
+    (e.g. a malformed or version-skewed peer payload) must be funneled into the
+    NetRunner's error path via ``panic`` -- never raised out of the receive call
+    (which would crash the Flare handler) and never dropped (which hangs the job).
+    """
+
+    @staticmethod
+    def _incoming_pkg(sample_frame, tagged_data: Any) -> TokenPackage:
+        """Build a package addressed to this site/job carrying attacker/peer-
+        controlled ``tagged_data`` (bypassing wrap_data, which is always valid)."""
+        return TokenPackage.model_validate(
+            {
+                "source_site": "source_site",
+                "source_node": 1,
+                "source_job": "source_job",
+                "target_job": "test_job",  # == mock_netrunner job_id
+                "is_yield": False,
+                "target_site": "test_site",  # == mock_netrunner this_site
+                "target_place": "test_place",
+                "frame": sample_frame.model_dump(),
+                "tagged_data": tagged_data,
+            }
+        )
+
+    _MALFORMED = [
+        ("BaseModel", "not-a-dict"),
+        ("BaseModel", {"data": {"name": "x"}}),  # missing 'class'
+        ("BaseModel", {"class": "json.dumps", "data": {}}),  # non-class
+        ("PickledObject", {"value": 123}),  # non-str value
+        ("PickledObject", {"value": "!!!not-base64!!!"}),  # bad base64
+    ]
+
+    @pytest.mark.parametrize("tagged_data", _MALFORMED)
+    def test_sync_receive_panics_instead_of_raising(
+        self, router, mock_netrunner, sample_frame, tagged_data
+    ):
+        pkg = self._incoming_pkg(sample_frame, tagged_data)
+
+        # Must NOT raise (a raise here would propagate into the Flare handler).
+        router.route_token_package_sync(pkg)
+
+        mock_netrunner.panic.assert_called_once()
+        (err,) = mock_netrunner.panic.call_args.args
+        assert isinstance(err, ValueError)
+
+    @pytest.mark.asyncio
+    async def test_async_receive_panics_instead_of_raising(
+        self, router, mock_netrunner, sample_frame
+    ):
+        pkg = self._incoming_pkg(sample_frame, ("BaseModel", "not-a-dict"))
+
+        await router.route_token_package_async(pkg)
+
+        mock_netrunner.panic.assert_called_once()
+        (err,) = mock_netrunner.panic.call_args.args
+        assert isinstance(err, ValueError)
+
+    def test_wellformed_incoming_token_does_not_panic(
+        self, router, mock_netrunner, sample_frame
+    ):
+        pkg = TokenPackage.wrap_data(
+            source_site="source_site",
+            source_node=1,
+            source_job="source_job",
+            target_site="test_site",
+            target_place="test_place",
+            target_job="test_job",
+            is_yield=False,
+            frame=sample_frame,
+            data={"ok": "data"},
+        )
+
+        router.route_token_package_sync(pkg)
+
+        mock_netrunner.panic.assert_not_called()
+
+
 class TestRouterAbstractMethods:
     """Test that abstract methods are properly defined."""
 
